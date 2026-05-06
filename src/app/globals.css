@@ -1,0 +1,232 @@
+/* src/app/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+/* ---------------------------------------------------------------------------
+   Variables de diseño
+--------------------------------------------------------------------------- */
+:root {
+  /* Colores principales */
+  --color-bg:           #0a0e0a;
+  --color-bg-card:      #111611;
+  --color-bg-elevated:  #161d16;
+  --color-border:       rgba(255, 255, 255, 0.07);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+
+  /* Verde cancha */
+  --color-green:        #22c55e;
+  --color-green-dim:    #16a34a;
+  --color-green-deep:   #052e16;
+  --color-green-glow:   rgba(34, 197, 94, 0.15);
+
+  /* Dorado jerarquía */
+  --color-gold:         #f59e0b;
+  --color-gold-dim:     #b45309;
+
+  /* Texto */
+  --color-text:         #f0fdf4;
+  --color-text-muted:   #6b7280;
+  --color-text-subtle:  #374151;
+
+  /* Estados */
+  --color-error:        #ef4444;
+  --color-error-bg:     rgba(239, 68, 68, 0.1);
+  --color-success:      #22c55e;
+  --color-live:         #ef4444;
+
+  /* Tipografía */
+  --font-display: 'Bebas Neue', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+
+  /* Espaciado */
+  --radius-sm:    6px;
+  --radius-md:    10px;
+  --radius-lg:    16px;
+  --radius-xl:    24px;
+
+  /* Sombras */
+  --shadow-green: 0 0 40px rgba(34, 197, 94, 0.12);
+  --shadow-card:  0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+   Reset y base
+--------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100dvh;
+  line-height: 1.6;
+}
+
+/* ---------------------------------------------------------------------------
+   Patrón hexagonal de fondo (balón de fútbol estilizado)
+--------------------------------------------------------------------------- */
+.bg-hex-pattern {
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(34, 197, 94, 0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.03) 0%, transparent 40%),
+    url("data:image/svg+xml,%3Csvg width='60' height='69' viewBox='0 0 60 69' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 17.3v34.6L30 69 0 51.9V17.3z' fill='none' stroke='rgba(34,197,94,0.04)' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: auto, auto, 60px 69px;
+}
+
+/* ---------------------------------------------------------------------------
+   Componentes reutilizables
+--------------------------------------------------------------------------- */
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus {
+  border-color: var(--color-green);
+  box-shadow: 0 0 0 3px var(--color-green-glow);
+}
+
+.input.error {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 3px var(--color-error-bg);
+}
+
+/* Label */
+.label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Botón primario */
+.btn-primary {
+  width: 100%;
+  padding: 13px 24px;
+  background: var(--color-green);
+  color: #052e16;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #16a34a;
+  box-shadow: 0 0 24px rgba(34, 197, 94, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Botón secundario (ghost) */
+.btn-ghost {
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.btn-ghost:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-hover);
+}
+
+/* Mensaje de error */
+.error-message {
+  font-size: 0.8125rem;
+  color: var(--color-error);
+  margin-top: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   Animaciones
+--------------------------------------------------------------------------- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);  }
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.5s ease both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+/* Stagger para hijos */
+.stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.stagger > *:nth-child(3) { animation-delay: 0.19s; }
+.stagger > *:nth-child(4) { animation-delay: 0.26s; }
+.stagger > *:nth-child(5) { animation-delay: 0.33s; }
+
+/* ---------------------------------------------------------------------------
+   Utilidades
+--------------------------------------------------------------------------- */
+.text-muted  { color: var(--color-text-muted); }
+.text-green  { color: var(--color-green); }
+.text-gold   { color: var(--color-gold); }
+.text-error  { color: var(--color-error); }
+.font-display { font-family: var(--font-display); }

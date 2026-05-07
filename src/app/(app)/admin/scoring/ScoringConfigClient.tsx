@@ -50,8 +50,7 @@ export default function ScoringConfigClient({ configs, isLocked }: Props) {
         updated_at: new Date().toISOString(),
       }))
 
-      const { error: err } = await supabase
-        .from('scoring_config')
+      const { error: err } = await (supabase.from('scoring_config') as any)
         .upsert(updates, { onConflict: 'stage,tier' })
 
       if (err) throw err

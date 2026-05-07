@@ -9,14 +9,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-    const { data: profile } = await supabase
+  const { data: profile } = await supabase
     .from('users')
     .select('is_superadmin')
     .eq('id', user.id)
     .single() as { data: { is_superadmin: boolean } | null }
 
   if (!profile?.is_superadmin) redirect('/dashboard')
-  
+
   // Notificaciones no leídas
   const { count } = await supabase
     .from('admin_notifications')

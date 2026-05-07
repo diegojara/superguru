@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   try {
     const supabase = createServiceClient()
 
-    const { data, error } = await supabase.rpc('lock_predictions_for_match')
+    const { data, error } = await (supabase.rpc as any)('lock_predictions_for_match')
 
     if (error) throw error
 

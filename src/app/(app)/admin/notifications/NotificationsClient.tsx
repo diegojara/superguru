@@ -23,12 +23,12 @@ export default function NotificationsClient({ notifications }: { notifications: 
 
   async function markRead(id: string) {
     setMarking(prev => ({ ...prev, [id]: true }))
-    await supabase.from('admin_notifications').update({ is_read: true }).eq('id', id)
+    await (supabase.from('admin_notifications') as any).update({ is_read: true }).eq('id', id)
     router.refresh()
   }
 
   async function markAllRead() {
-    await supabase.from('admin_notifications').update({ is_read: true }).eq('is_read', false)
+    await (supabase.from('admin_notifications') as any).update({ is_read: true }).eq('is_read', false)
     router.refresh()
   }
 
@@ -69,8 +69,7 @@ export default function NotificationsClient({ notifications }: { notifications: 
                 {!n.is_read && (
                   <span style={{
                     display: 'inline-block',
-                    width: '6px',
-                    height: '6px',
+                    width: '6px', height: '6px',
                     borderRadius: '50%',
                     background: 'var(--color-gold)',
                     marginRight: '8px',
@@ -81,11 +80,7 @@ export default function NotificationsClient({ notifications }: { notifications: 
                 <span style={{ fontSize: '0.9rem', color: 'var(--color-text)' }}>{n.message}</span>
                 <div style={{ marginTop: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   {n.pools && (
-                    <Link href={`/pools/${n.pool_id}`} style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--color-green)',
-                      textDecoration: 'none',
-                    }}>
+                    <Link href={`/pools/${n.pool_id}`} style={{ fontSize: '0.75rem', color: 'var(--color-green)', textDecoration: 'none' }}>
                       Ver Polla →
                     </Link>
                   )}

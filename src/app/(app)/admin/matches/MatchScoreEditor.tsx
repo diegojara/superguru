@@ -39,27 +39,22 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
   async function handleSave() {
     const home = parseInt(homeScore)
     const away = parseInt(awayScore)
-
     if (isNaN(home) || isNaN(away) || home < 0 || away < 0) {
       setError('Ingresa marcadores válidos.')
       return
     }
-
     setSaving(true)
     setError(null)
-
     try {
       const { error: rpcError } = await (supabase.rpc as any)('update_match_score', {
-        p_match_id:            match.id,
-        p_home_score:          home,
-        p_away_score:          away,
-        p_status:              status,
-        p_went_to_extra_time:  wentExtra,
-        p_went_to_penalties:   wentPens,
+        p_match_id:           match.id,
+        p_home_score:         home,
+        p_away_score:         away,
+        p_status:             status,
+        p_went_to_extra_time: wentExtra,
+        p_went_to_penalties:  wentPens,
       })
-
       if (rpcError) throw rpcError
-
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
       router.refresh()
@@ -70,7 +65,6 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
     }
   }
 
-  const statusColor = STATUS_COLORS[match.status]
   const isLive = ['live', 'extra_time', 'penalties'].includes(match.status)
 
   return (
@@ -83,13 +77,12 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
       flexDirection: 'column',
       gap: '12px',
     }}>
-      {/* Cabecera */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ fontSize: '0.9375rem', fontWeight: 500 }}>
           {match.home_team} vs {match.away_team}
         </span>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.75rem', color: statusColor }}>
+          <span style={{ fontSize: '0.75rem', color: STATUS_COLORS[match.status] }}>
             {STATUS_OPTIONS.find(s => s.value === match.status)?.label}
           </span>
           <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
@@ -98,16 +91,10 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
         </div>
       </div>
 
-      {/* Controles */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
-
-        {/* Marcador */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <input
-            type="number"
-            min={0}
-            max={30}
-            value={homeScore}
+            type="number" min={0} max={30} value={homeScore}
             onChange={e => { setHomeScore(e.target.value); setSaved(false) }}
             className="input"
             style={{ width: '64px', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.4rem' }}
@@ -115,10 +102,7 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
           />
           <span style={{ color: 'var(--color-text-muted)', fontSize: '1.25rem' }}>–</span>
           <input
-            type="number"
-            min={0}
-            max={30}
-            value={awayScore}
+            type="number" min={0} max={30} value={awayScore}
             onChange={e => { setAwayScore(e.target.value); setSaved(false) }}
             className="input"
             style={{ width: '64px', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.4rem' }}
@@ -126,7 +110,6 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
           />
         </div>
 
-        {/* Estado */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label className="label">Estado</label>
           <select
@@ -141,36 +124,23 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
           </select>
         </div>
 
-        {/* Flags */}
         <div style={{ display: 'flex', gap: '12px', paddingBottom: '2px' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={wentExtra}
-              onChange={e => setWentExtra(e.target.checked)}
-              style={{ accentColor: 'var(--color-green)' }}
-            />
+            <input type="checkbox" checked={wentExtra} onChange={e => setWentExtra(e.target.checked)} style={{ accentColor: 'var(--color-green)' }} />
             Tiempo extra
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: 'var(--color-text-muted)', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={wentPens}
-              onChange={e => setWentPens(e.target.checked)}
-              style={{ accentColor: 'var(--color-green)' }}
-            />
+            <input type="checkbox" checked={wentPens} onChange={e => setWentPens(e.target.checked)} style={{ accentColor: 'var(--color-green)' }} />
             Penales
           </label>
         </div>
 
-        {/* Guardar */}
         <button
           onClick={handleSave}
           disabled={saving}
           className="btn-primary"
           style={{
-            width: 'auto',
-            padding: '10px 20px',
+            width: 'auto', padding: '10px 20px',
             background: saved ? 'var(--color-green-deep)' : 'var(--color-gold)',
             color: saved ? 'var(--color-green)' : '#000',
           }}

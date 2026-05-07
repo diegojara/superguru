@@ -41,8 +41,7 @@ export default function PoolSettingsClient({ pool, members, myMember, userId }: 
     setSaved(false)
     setError(null)
     try {
-      const { error: err } = await supabase
-        .from('pools')
+      const { error: err } = await (supabase.from('pools') as any)
         .update({ welcome_message: welcome.trim() || null })
         .eq('id', pool.id)
       if (err) throw err
@@ -62,8 +61,7 @@ export default function PoolSettingsClient({ pool, members, myMember, userId }: 
     setJoiningSelf(true)
     setJoinError(null)
     try {
-      const { error: err } = await supabase
-        .from('pool_members')
+      const { error: err } = await (supabase.from('pool_members') as any)
         .insert({ pool_id: pool.id, user_id: userId, display_name: displayName.trim() })
       if (err) {
         if (err.code === '23505') setJoinError('Ya estás inscrito en esta Polla.')

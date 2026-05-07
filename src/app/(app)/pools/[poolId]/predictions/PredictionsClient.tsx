@@ -96,7 +96,7 @@ export default function PredictionsClient({
     setSaving(prev => ({ ...prev, [matchId]: true }))
     setErrors(prev => ({ ...prev, [matchId]: '' }))
     try {
-      const { error } = await supabase.from('predictions').upsert({
+      const { error } = await (supabase.from('predictions') as any).upsert({
         pool_member_id: poolMemberId,
         match_id: matchId,
         predicted_home: home,
@@ -105,7 +105,7 @@ export default function PredictionsClient({
       }, { onConflict: 'pool_member_id,match_id' })
       if (error) throw error
       if (replicate) {
-        await supabase.rpc('replicate_prediction', {
+        await (supabase.rpc as any)('replicate_prediction', {
           p_source_pool_member_id: poolMemberId,
           p_match_id: matchId,
           p_predicted_home: home,

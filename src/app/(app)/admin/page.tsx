@@ -65,7 +65,7 @@ export default async function AdminPage() {
             ● EN VIVO AHORA
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {liveMatches.map(m => (
+            {(liveMatches as any[]).map(m => (
               <div key={m.id} style={{
                 display: 'flex',
                 justifyContent: 'space-between',

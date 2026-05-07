@@ -21,7 +21,7 @@ export default async function AppLayout({
     .from('users')
     .select('full_name, is_superadmin')
     .eq('id', user.id)
-    .single() as { data: { full_name: string; is_superadmin: boolean } | null }
+    .single() as any as { data: { full_name: string; is_superadmin: boolean } | null }
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>

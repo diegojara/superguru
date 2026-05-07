@@ -22,15 +22,15 @@ export default async function PoolLayout({ children, params }: Props) {
     .from('pools')
     .select('id, name')
     .eq('id', poolId)
-    .single() as { data: { id: string; name: string } | null }
+    .single() as any as { data: { id: string; name: string } | null }
 
   if (!pool) notFound()
 
   // Verificar que el usuario tiene acceso (miembro o admin o superadmin)
   const [{ data: isMember }, { data: isAdmin }, { data: profileData }] = await Promise.all([
-    supabase.from('pool_members').select('id').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle(),
-    supabase.from('pool_admins').select('id').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle(),
-    supabase.from('users').select('is_superadmin').eq('id', user.id).single() as Promise<{ data: { is_superadmin: boolean } | null, error: unknown }>,
+    (supabase.from('pool_members').select('id').eq('pool_id') as any, poolId).eq('user_id', user.id).maybeSingle(),
+    (supabase.from('pool_admins').select('id').eq('pool_id') as any, poolId).eq('user_id', user.id).maybeSingle(),
+    (supabase.from('users').select('is_superadmin').eq('id') as any, user.id).single() as Promise<{ data: { is_superadmin: boolean } | null, error: unknown }>,
   ])
 
   const isSuperAdmin = (profileData as { is_superadmin: boolean } | null)?.is_superadmin ?? false

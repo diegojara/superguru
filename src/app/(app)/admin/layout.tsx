@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     .from('users')
     .select('is_superadmin')
     .eq('id', user.id)
-    .single() as { data: { is_superadmin: boolean } | null }
+    .single() as any as { data: { is_superadmin: boolean } | null }
 
   if (!profile?.is_superadmin) redirect('/dashboard')
 

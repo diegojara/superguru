@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
       .from('users')
       .select('is_superadmin')
       .eq('id', user.id)
-      .single()
+      .single() as any
 
     if (!userData?.is_superadmin) {
       return NextResponse.redirect(new URL('/dashboard', request.url))

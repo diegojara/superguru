@@ -49,7 +49,7 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
     setError(null)
 
     try {
-      const { error: rpcError } = await supabase.rpc('update_match_score', {
+      const { error: rpcError } = await (supabase.rpc as any)('update_match_score', {
         p_match_id:            match.id,
         p_home_score:          home,
         p_away_score:          away,

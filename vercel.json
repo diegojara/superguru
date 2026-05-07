@@ -1,12 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/lock-predictions",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/sync-scores",
-      "schedule": "*/1 * * * *"
-    }
-  ]
-}
+{}

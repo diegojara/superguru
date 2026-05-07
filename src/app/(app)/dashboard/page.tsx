@@ -13,20 +13,19 @@ export default async function DashboardPage() {
   if (!user) redirect('/login')
 
   // Pollas donde es participante
-  const { data: memberRows } = await supabase
+const { data: memberRows } = await (supabase
     .from('pool_members')
     .select('id, display_name, pool_id, pools(*)')
     .eq('user_id', user.id)
-    .order('joined_at', { ascending: false })
+    .order('joined_at', { ascending: false })) as any
 
-  // Pollas donde es admin pero NO participante
-  const { data: adminRows } = await supabase
+  const { data: adminRows } = await (supabase
     .from('pool_admins')
     .select('pool_id, pools(*)')
-    .eq('user_id', user.id)
+    .eq('user_id', user.id)) as any
 
-  const memberPoolIds = new Set((memberRows ?? []).map(m => m.pool_id))
-  const adminOnlyRows = (adminRows ?? []).filter(a => !memberPoolIds.has(a.pool_id))
+  const memberPoolIds = new Set((memberRows ?? []).map((m: any) => m.pool_id))
+  const adminOnlyRows = (adminRows ?? []).filter((a: any) => !memberPoolIds.has(a.pool_id))
 
   // Puntajes y posiciones desde la vista leaderboard_by_pool
   const poolMemberIds = (memberRows ?? []).map(m => m.id)

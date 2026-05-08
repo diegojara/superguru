@@ -141,8 +141,6 @@ function PoolRow({ poolId, name, displayName, points, posLabel, pos, isActive, r
         borderBottom: isLast ? 'none' : '1px solid var(--color-border)',
         cursor: 'pointer', transition: 'background 0.15s',
       }}
-        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'var(--color-bg-elevated)' }}
-        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: displayName ? '3px' : 0, flexWrap: 'wrap' }}>

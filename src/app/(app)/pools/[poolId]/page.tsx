@@ -54,7 +54,7 @@ export default async function PoolPage({ params }: Props) {
   const { data: poolMatches } = await supabase
     .from('pool_matches').select('match_id, matches(*)')
     .eq('pool_id', poolId)
-    .order('kickoff_at', { foreignTable: 'matches', ascending: true }) as any
+    .order('matches(kickoff_at)', { ascending: true }) as any
 
   const allMatches: any[] = ((poolMatches as any[]) ?? []).map((pm: any) => pm.matches).filter(Boolean)
   // Deduplicar por match_id

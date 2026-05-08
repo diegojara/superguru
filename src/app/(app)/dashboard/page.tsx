@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import JoinByLinkButton from './JoinByLinkButton'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
   const adminOnlyRows = ((adminRows as any[]) ?? []).filter((a: any) => !memberPoolIds.has(a.pool_id))
 
   const poolMemberIds = ((memberRows as any[]) ?? []).map((m: any) => m.id)
-  const allPoolIds = [...memberPoolIds] as string[]
+  const allPoolIds    = [...memberPoolIds] as string[]
 
   const [{ data: myScores }, { data: allLeaderboard }] = await Promise.all([
     poolMemberIds.length > 0
@@ -35,10 +36,10 @@ export default async function DashboardPage() {
   ]) as any[]
 
   function getStanding(poolMemberId: string, poolId: string): { pos: number; total: number } {
-    const myPts = ((myScores as any[]) ?? []).find((s: any) => s.pool_member_id === poolMemberId)?.total_points ?? 0
+    const myPts   = ((myScores as any[]) ?? []).find((s: any) => s.pool_member_id === poolMemberId)?.total_points ?? 0
     const entries = ((allLeaderboard as any[]) ?? []).filter((e: any) => e.pool_id === poolId)
-    const total = entries.length
-    const pos = entries.filter((e: any) => e.total_points > myPts).length + 1
+    const total   = entries.length
+    const pos     = entries.filter((e: any) => e.total_points > myPts).length + 1
     return { pos, total }
   }
 
@@ -58,15 +59,7 @@ export default async function DashboardPage() {
       {systemMessages && (systemMessages as any[]).length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {(systemMessages as any[]).map((msg: any) => (
-            <div key={msg.id} style={{
-              padding: '10px 14px',
-              background: 'var(--color-green-deep)',
-              border: '1px solid rgba(34, 197, 94, 0.2)',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.875rem',
-              color: 'var(--color-text)',
-              display: 'flex', gap: '8px',
-            }}>
+            <div key={msg.id} style={{ padding: '10px 14px', background: 'var(--color-green-deep)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: 'var(--radius-md)', fontSize: '0.875rem', color: 'var(--color-text)', display: 'flex', gap: '8px' }}>
               <span>📢</span><span>{msg.content}</span>
             </div>
           ))}
@@ -77,17 +70,20 @@ export default async function DashboardPage() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.75rem, 5vw, 2.5rem)', letterSpacing: '0.05em', lineHeight: 1 }}>
           MIS POLLAS
         </h1>
-        <Link href="/pools/new" style={{ textDecoration: 'none' }}>
-          <button style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '9px 18px', background: 'var(--color-green)', color: '#052e16',
-            border: 'none', borderRadius: 'var(--radius-md)',
-            fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
-          }}>
-            <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
-            Nueva Polla
-          </button>
-        </Link>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <JoinByLinkButton />
+          <Link href="/pools/new" style={{ textDecoration: 'none' }}>
+            <button style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '9px 18px', background: 'var(--color-green)', color: '#052e16',
+              border: 'none', borderRadius: 'var(--radius-md)',
+              fontFamily: 'var(--font-body)', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+            }}>
+              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>+</span>
+              Nueva Polla
+            </button>
+          </Link>
+        </div>
       </div>
 
       {!hasPools ? (
@@ -96,9 +92,7 @@ export default async function DashboardPage() {
         <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 88px', padding: '11px 20px', background: 'var(--color-green-dim)', gap: '8px' }}>
             {[{ label: 'Polla', align: 'left' }, { label: 'Puntos', align: 'center' }, { label: 'Posición', align: 'center' }].map(h => (
-              <span key={h.label} style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#dcfce7', textAlign: h.align as any, letterSpacing: '0.03em' }}>
-                {h.label}
-              </span>
+              <span key={h.label} style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#dcfce7', textAlign: h.align as any, letterSpacing: '0.03em' }}>{h.label}</span>
             ))}
           </div>
 
@@ -109,7 +103,7 @@ export default async function DashboardPage() {
             const { pos, total } = getStanding(entry.id, pool.id)
             const posLabel = total > 0 ? `${pos}/${total}` : '–'
             const isActive = new Date(pool.ends_at) > new Date()
-            const isLast = i === ((memberRows as any[]) ?? []).length - 1 && adminOnlyRows.length === 0
+            const isLast   = i === ((memberRows as any[]) ?? []).length - 1 && adminOnlyRows.length === 0
             return <PoolRow key={pool.id} poolId={pool.id} name={pool.name} displayName={entry.display_name} points={myPoints} posLabel={posLabel} pos={pos} isActive={isActive} role="member" isLast={isLast} index={i} />
           })}
 
@@ -117,7 +111,7 @@ export default async function DashboardPage() {
             const pool = entry.pools
             if (!pool) return null
             const isActive = new Date(pool.ends_at) > new Date()
-            const isLast = i === adminOnlyRows.length - 1
+            const isLast   = i === adminOnlyRows.length - 1
             return <PoolRow key={pool.id} poolId={pool.id} name={pool.name} displayName={null} points={null} posLabel="–" pos={null} isActive={isActive} role="admin" isLast={isLast} index={((memberRows as any[]) ?? []).length + i} />
           })}
         </div>
@@ -139,9 +133,8 @@ function PoolRow({ poolId, name, displayName, points, posLabel, pos, isActive, r
         display: 'grid', gridTemplateColumns: '1fr 80px 88px',
         padding: '14px 20px', gap: '8px', alignItems: 'center',
         borderBottom: isLast ? 'none' : '1px solid var(--color-border)',
-        cursor: 'pointer', transition: 'background 0.15s',
-      }}
-      >
+        cursor: 'pointer',
+      }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: displayName ? '3px' : 0, flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.9375rem', fontWeight: 500, color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
@@ -167,11 +160,14 @@ function EmptyState() {
       <div style={{ fontSize: '2.5rem', marginBottom: '14px' }}>⚽</div>
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', letterSpacing: '0.06em', marginBottom: '10px' }}>AÚN NO ESTÁS EN NINGUNA POLLA</h2>
       <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', maxWidth: '320px', margin: '0 auto 24px', lineHeight: 1.6 }}>
-        Crea la tuya e invita a tus amigos, o pide el enlace a alguien que ya tenga una.
+        Crea la tuya, o pide el enlace a alguien que ya tenga una.
       </p>
-      <Link href="/pools/new" style={{ textDecoration: 'none' }}>
-        <button className="btn-primary" style={{ maxWidth: '220px', margin: '0 auto' }}>Crear mi primera Polla</button>
-      </Link>
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <JoinByLinkButton />
+        <Link href="/pools/new" style={{ textDecoration: 'none' }}>
+          <button className="btn-primary" style={{ maxWidth: '220px' }}>Crear mi primera Polla</button>
+        </Link>
+      </div>
     </div>
   )
 }

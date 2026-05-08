@@ -56,7 +56,14 @@ export default async function PoolPage({ params }: Props) {
     .eq('pool_id', poolId)
     .order('kickoff_at', { foreignTable: 'matches', ascending: true }) as any
 
-  const matches: any[] = ((poolMatches as any[]) ?? []).map((pm: any) => pm.matches).filter(Boolean)
+  const allMatches: any[] = ((poolMatches as any[]) ?? []).map((pm: any) => pm.matches).filter(Boolean)
+  // Deduplicar por match_id
+  const seenIds = new Set<string>()
+  const matches: any[] = allMatches.filter((m: any) => {
+    if (seenIds.has(m.id)) return false
+    seenIds.add(m.id)
+    return true
+  })
 
   const { data: memberRow } = await supabase
     .from('pool_members').select('id').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle() as any

@@ -54,6 +54,7 @@ export default function RegisterForm() {
     setLoading(true)
     try {
       const supabase = createClient()
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
       const { error: signUpError } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),

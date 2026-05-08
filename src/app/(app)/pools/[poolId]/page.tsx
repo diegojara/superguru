@@ -19,39 +19,42 @@ function teamCode(name: string): string {
     'Portugal': 'POR','Congo DR': 'COD','Uzbekistán': 'UZB','Colombia': 'COL',
     'Inglaterra': 'ENG','Croacia': 'CRO','Ghana': 'GHA','Panamá': 'PAN',
   }
-  if (o[name]) return o[name]
-  // Clasificados: "1ro Grupo A" → "1° A"
-  const primero = name.match(/^1ro Grupo ([A-Z])$/)
-  if (primero) return `1° ${primero[1]}`
-  const segundo = name.match(/^2do Grupo ([A-Z])$/)
-  if (segundo) return `2° ${segundo[1]}`
-  // Mejor tercero: "Mejor 3ro A/B/C/D/F" → "M3 a-f"
-  const mejor = name.match(/^Mejor 3ro (.+)$/)
-  if (mejor) return `M3 ${mejor[1]}`
-  // Ganador: "Gan. M73" → "G73"
-  const gan = name.match(/^Gan\. M(\d+)$/)
-  if (gan) return `G${gan[1]}`
-  // Perdedor: "Perd. M101" → "P101"
-  const perd = name.match(/^Perd\. M(\d+)$/)
-  if (perd) return `P${perd[1]}`
-  return name.slice(0, 4)
+  return o[name] ?? name.slice(0, 3).toUpperCase()
 }
-function flagEmoji(name: string): string {
-  const f: Record<string, string> = {
-    'México': '🇲🇽','Corea del Sur': '🇰🇷','Chequia': '🇨🇿','Sudáfrica': '🇿🇦',
-    'Canadá': '🇨🇦','Bosnia y Herz.': '🇧🇦','Qatar': '🇶🇦','Suiza': '🇨🇭',
-    'Brasil': '🇧🇷','Marruecos': '🇲🇦','Haití': '🇭🇹','Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-    'EE. UU.': '🇺🇸','Paraguay': '🇵🇾','Australia': '🇦🇺','Turquía': '🇹🇷',
-    'Alemania': '🇩🇪','Costa Marfil': '🇨🇮','Ecuador': '🇪🇨','Curazao': '🇨🇼',
-    'Países Bajos': '🇳🇱','Japón': '🇯🇵','Suecia': '🇸🇪','Túnez': '🇹🇳',
-    'Bélgica': '🇧🇪','Egipto': '🇪🇬','Irán': '🇮🇷','Nueva Zelanda': '🇳🇿',
-    'España': '🇪🇸','Cabo Verde': '🇨🇻','Arabia Saudita': '🇸🇦','Uruguay': '🇺🇾',
-    'Francia': '🇫🇷','Senegal': '🇸🇳','Iraq': '🇮🇶','Noruega': '🇳🇴',
-    'Argentina': '🇦🇷','Argelia': '🇩🇿','Austria': '🇦🇹','Jordania': '🇯🇴',
-    'Portugal': '🇵🇹','Congo DR': '🇨🇩','Uzbekistán': '🇺🇿','Colombia': '🇨🇴',
-    'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿','Croacia': '🇭🇷','Ghana': '🇬🇭','Panamá': '🇵🇦',
-  }
+
   return f[name] ?? '🏳️'
+}
+
+function flagIso(name: string): string {
+  const f: Record<string, string> = {
+    'México': 'mx','Corea del Sur': 'kr','Chequia': 'cz','Sudáfrica': 'za',
+    'Canadá': 'ca','Bosnia y Herz.': 'ba','Qatar': 'qa','Suiza': 'ch',
+    'Brasil': 'br','Marruecos': 'ma','Haití': 'ht','Escocia': 'gb-sct',
+    'EE. UU.': 'us','Paraguay': 'py','Australia': 'au','Turquía': 'tr',
+    'Alemania': 'de','Costa Marfil': 'ci','Ecuador': 'ec','Curazao': 'cw',
+    'Países Bajos': 'nl','Japón': 'jp','Suecia': 'se','Túnez': 'tn',
+    'Bélgica': 'be','Egipto': 'eg','Irán': 'ir','Nueva Zelanda': 'nz',
+    'España': 'es','Cabo Verde': 'cv','Arabia Saudita': 'sa','Uruguay': 'uy',
+    'Francia': 'fr','Senegal': 'sn','Iraq': 'iq','Noruega': 'no',
+    'Argentina': 'ar','Argelia': 'dz','Austria': 'at','Jordania': 'jo',
+    'Portugal': 'pt','Congo DR': 'cd','Uzbekistán': 'uz','Colombia': 'co',
+    'Inglaterra': 'gb-eng','Croacia': 'hr','Ghana': 'gh','Panamá': 'pa',
+  }
+  return f[name] ?? ''
+}
+
+function FlagImg({ name }: { name: string }) {
+  const iso = flagIso(name)
+  if (!iso) return <span style={{ width: '20px', display: 'inline-block' }} />
+  return (
+    <img
+      src={`https://flagcdn.com/w20/${iso}.png`}
+      width={20}
+      height={15}
+      alt={name}
+      style={{ objectFit: 'cover', borderRadius: '2px', display: 'block' }}
+    />
+  )
 }
 
 interface Props { params: Promise<{ poolId: string }> }
@@ -68,7 +71,7 @@ export default async function PoolPage({ params }: Props) {
   const { data: poolMatches } = await supabase
     .from('pool_matches').select('match_id, matches(*)')
     .eq('pool_id', poolId)
-    .order('matches(kickoff_at)', { ascending: true }) as any
+    .order('kickoff_at', { foreignTable: 'matches', ascending: true }) as any
 
   const allMatches: any[] = ((poolMatches as any[]) ?? []).map((pm: any) => pm.matches).filter(Boolean)
   // Deduplicar por match_id
@@ -131,8 +134,8 @@ export default async function PoolPage({ params }: Props) {
               const timeStr = cotTime.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' })
               return (
                 <div key={match.id} style={{ borderBottom: isLast ? 'none' : '1px solid var(--color-border)', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)' }}>
-                  <TeamRow flag={flagEmoji(match.home_team)} code={teamCode(match.home_team)} realScore={match.home_score} predScore={pred?.predicted_home ?? null} isTop={true} isLive={isLive} isDone={isDone} hasScore={hasScore} timeStr={timeStr} points={score?.points_earned ?? null} showPoints={true} locked={!!pred?.locked_at} />
-                  <TeamRow flag={flagEmoji(match.away_team)} code={teamCode(match.away_team)} realScore={match.away_score} predScore={pred?.predicted_away ?? null} isTop={false} isLive={isLive} isDone={isDone} hasScore={hasScore} timeStr={timeStr} points={score?.points_earned ?? null} showPoints={false} locked={!!pred?.locked_at} />
+                  <TeamRow flag={<FlagImg name={match.home_team} />} code={teamCode(match.home_team)} realScore={match.home_score} predScore={pred?.predicted_home ?? null} isTop={true} isLive={isLive} isDone={isDone} hasScore={hasScore} timeStr={timeStr} points={score?.points_earned ?? null} showPoints={true} locked={!!pred?.locked_at} />
+                  <TeamRow flag={<FlagImg name={match.away_team} />} code={teamCode(match.away_team)} realScore={match.away_score} predScore={pred?.predicted_away ?? null} isTop={false} isLive={isLive} isDone={isDone} hasScore={hasScore} timeStr={timeStr} points={score?.points_earned ?? null} showPoints={false} locked={!!pred?.locked_at} />
                 </div>
               )
             })}

@@ -22,7 +22,7 @@ function teamCode(name: string): string {
   return o[name] ?? name.slice(0, 3).toUpperCase()
 }
 
-  return f[name] ?? '🏳️'
+ return ''
 }
 
 function flagIso(name: string): string {
@@ -40,7 +40,7 @@ function flagIso(name: string): string {
     'Portugal': 'pt','Congo DR': 'cd','Uzbekistán': 'uz','Colombia': 'co',
     'Inglaterra': 'gb-eng','Croacia': 'hr','Ghana': 'gh','Panamá': 'pa',
   }
-  return f[name] ?? ''
+  return ''
 }
 
 function FlagImg({ name }: { name: string }) {

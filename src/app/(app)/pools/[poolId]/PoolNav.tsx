@@ -27,6 +27,7 @@ export default function PoolNav({ poolId, canAdmin }: Props) {
       borderBottom: '1px solid var(--color-border)',
       paddingBottom: '0',
       overflowX: 'auto',
+      scrollbarWidth: 'none',
     }}>
       {tabs.map(tab => {
         const active = pathname === tab.href

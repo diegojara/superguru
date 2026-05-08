@@ -22,7 +22,22 @@ function teamCode(name: string): string {
     'Portugal': 'POR','Congo DR': 'COD','Uzbekistán': 'UZB','Colombia': 'COL',
     'Inglaterra': 'ENG','Croacia': 'CRO','Ghana': 'GHA','Panamá': 'PAN',
   }
-  return o[name] ?? name.slice(0, 3).toUpperCase()
+  if (o[name]) return o[name]
+  // Clasificados: "1ro Grupo A" → "1° A"
+  const primero = name.match(/^1ro Grupo ([A-Z])$/)
+  if (primero) return `1° ${primero[1]}`
+  const segundo = name.match(/^2do Grupo ([A-Z])$/)
+  if (segundo) return `2° ${segundo[1]}`
+  // Mejor tercero: "Mejor 3ro A/B/C/D/F" → "M3 a-f"
+  const mejor = name.match(/^Mejor 3ro (.+)$/)
+  if (mejor) return `M3 ${mejor[1]}`
+  // Ganador: "Gan. M73" → "G73"
+  const gan = name.match(/^Gan\. M(\d+)$/)
+  if (gan) return `G${gan[1]}`
+  // Perdedor: "Perd. M101" → "P101"
+  const perd = name.match(/^Perd\. M(\d+)$/)
+  if (perd) return `P${perd[1]}`
+  return name.slice(0, 4)
 }
 
 function flagEmoji(name: string): string {

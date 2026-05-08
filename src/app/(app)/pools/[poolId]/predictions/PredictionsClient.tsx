@@ -25,8 +25,6 @@ function teamCode(name: string): string {
   return o[name] ?? name.slice(0, 3).toUpperCase()
 }
 
-  return f[name] ?? '🏳️'
-}
 
 function flagIso(name: string): string {
   const f: Record<string, string> = {

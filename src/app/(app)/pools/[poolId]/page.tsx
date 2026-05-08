@@ -22,9 +22,6 @@ function teamCode(name: string): string {
   return o[name] ?? name.slice(0, 3).toUpperCase()
 }
 
- return ''
-}
-
 function flagIso(name: string): string {
   const f: Record<string, string> = {
     'México': 'mx','Corea del Sur': 'kr','Chequia': 'cz','Sudáfrica': 'za',
@@ -40,7 +37,7 @@ function flagIso(name: string): string {
     'Portugal': 'pt','Congo DR': 'cd','Uzbekistán': 'uz','Colombia': 'co',
     'Inglaterra': 'gb-eng','Croacia': 'hr','Ghana': 'gh','Panamá': 'pa',
   }
-  return ''
+  return f[name] ?? ''
 }
 
 function FlagImg({ name }: { name: string }) {

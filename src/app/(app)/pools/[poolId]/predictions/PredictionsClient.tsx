@@ -107,13 +107,12 @@ export default function PredictionsClient({ poolMemberId, matches, initialPredic
     setPreds(prev => ({ ...prev, [matchId]: { ...prev[matchId], status: 'saving' } }))
 
     try {
-      const { error } = await (supabase.from('predictions') as any).upsert({
-        pool_member_id: poolMemberId,
-        match_id: matchId,
-        predicted_home: h,
-        predicted_away: a,
-        submitted_at: new Date().toISOString(),
-      }, { onConflict: 'pool_member_id,match_id' })
+      const { error } = await (supabase.rpc as any)('save_prediction', {
+        p_pool_member_id: poolMemberId,
+        p_match_id:       matchId,
+        p_predicted_home: h,
+        p_predicted_away: a,
+      })
 
       if (error) throw error
       setPreds(prev => ({ ...prev, [matchId]: { ...prev[matchId], status: 'saved' } }))

@@ -1,10 +1,15 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Habilitar React strict mode para detectar problemas en desarrollo
   reactStrictMode: true,
-
-  // Headers de seguridad
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'flagcdn.com',
+      },
+    ],
+  },
   async headers() {
     return [
       {

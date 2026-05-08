@@ -17,6 +17,7 @@ export default function NewPoolForm() {
   const [endsAt, setEndsAt]                       = useState(WC_END)
   const [includesChampion, setIncludesChampion]   = useState(false)
   const [includesTopScorer, setIncludesTopScorer] = useState(false)
+  const [inviteCode, setInviteCode]                 = useState('')
   const [errors, setErrors]                       = useState<Record<string, string>>({})
   const [globalError, setGlobalError]             = useState<string | null>(null)
   const [loading, setLoading]                     = useState(false)
@@ -54,6 +55,7 @@ export default function NewPoolForm() {
         p_ends_at:                   endsAtUtc,
         p_includes_champion_guess:   includesChampion,
         p_includes_top_scorer_guess: includesTopScorer,
+        p_invite_code:               inviteCode.trim().toUpperCase() || null,
       })
       if (error) throw error
 

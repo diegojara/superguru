@@ -147,7 +147,7 @@ export default function PredictionsClient({
   function toggleMember(id: string) {
     setSelected(prev =>
       prev.includes(id) ? prev.filter(x => x !== id)
-      : prev.length < 2 ? [...prev, id]
+      : prev.length < 4 ? [...prev, id]
       : prev
     )
   }
@@ -180,7 +180,7 @@ export default function PredictionsClient({
       {allMembers.length > 0 && (
         <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '14px 18px' }}>
           <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600 }}>
-            Comparar con (máx. 2):
+            Comparar con (máx. 4):
           </p>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {allMembers.map((m: Member) => {
@@ -257,7 +257,7 @@ export default function PredictionsClient({
 
                   {/* Grid: bandera | código | real | mi pred | [otros...] | pts | estado */}
                   {/* Fila local */}
-                  <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${selected.map(() => '48px').join(' ')} ${score ? '36px' : ''} 1fr`, alignItems: 'center', padding: '10px 14px 3px', gap: '0 8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${score ? '36px' : ''} ${selected.map(() => '48px').join(' ')} 1fr`, alignItems: 'center', padding: '10px 14px 3px', gap: '0 8px' }}>
                     <FlagImg name={match.home_team} />
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', letterSpacing: '0.04em' }}>{teamCode(match.home_team)}</span>
 
@@ -277,6 +277,15 @@ export default function PredictionsClient({
                       }
                     </div>
 
+                    {/* Puntos — antes de los otros participantes */}
+                    {score && (
+                      <div style={{ textAlign: 'center', gridRow: 'span 1' }}>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: score.points_earned > 0 ? 'var(--color-green)' : 'var(--color-text-subtle)' }}>
+                          {score.points_earned}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Pronósticos de otros (solo si visible) */}
                     {selected.map(memberId => {
                       const op = otherPredMap[match.id]?.[memberId]
@@ -290,15 +299,6 @@ export default function PredictionsClient({
                       )
                     })}
 
-                    {/* Puntos (ocupa dos filas visualmente) */}
-                    {score && (
-                      <div style={{ textAlign: 'center', gridRow: 'span 1' }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: score.points_earned > 0 ? 'var(--color-green)' : 'var(--color-text-subtle)' }}>
-                          {score.points_earned}
-                        </span>
-                      </div>
-                    )}
-
                     {/* Horario / estado */}
                     <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', paddingLeft: '4px' }}>
                       {isLive && <span style={{ color: 'var(--color-live)', fontWeight: 600 }}>● VIVO</span>}
@@ -307,7 +307,7 @@ export default function PredictionsClient({
                   </div>
 
                   {/* Fila visitante */}
-                  <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${selected.map(() => '48px').join(' ')} ${score ? '36px' : ''} 1fr`, alignItems: 'center', padding: '3px 14px 10px', gap: '0 8px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${score ? '36px' : ''} ${selected.map(() => '48px').join(' ')} 1fr`, alignItems: 'center', padding: '3px 14px 10px', gap: '0 8px' }}>
                     <FlagImg name={match.away_team} />
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', letterSpacing: '0.04em' }}>{teamCode(match.away_team)}</span>
 
@@ -327,6 +327,9 @@ export default function PredictionsClient({
                       }
                     </div>
 
+                    {/* Espacio para puntos */}
+                    {score && <div />}
+
                     {/* Pronósticos de otros */}
                     {selected.map(memberId => {
                       const op = otherPredMap[match.id]?.[memberId]
@@ -340,9 +343,6 @@ export default function PredictionsClient({
                       )
                     })}
 
-                    {/* Espacio para puntos */}
-                    {score && <div />}
-
                     {/* Estado de guardado */}
                     <div style={{ fontSize: '0.7rem', paddingLeft: '4px',
                       color: status === 'saved' ? 'var(--color-green)' : status === 'saving' ? 'var(--color-text-muted)' : status === 'error' ? 'var(--color-error)' : 'transparent'
@@ -353,16 +353,16 @@ export default function PredictionsClient({
 
                   {/* Leyenda de columnas (solo primer partido del día) */}
                   {i === 0 && (selected.length > 0 || true) && (
-                    <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${selected.map(() => '48px').join(' ')} ${score ? '36px' : ''} 1fr`, padding: '0 14px 6px', gap: '0 8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${score ? '36px' : ''} ${selected.map(() => '48px').join(' ')} 1fr`, padding: '0 14px 6px', gap: '0 8px' }}>
                       <div /><div />
                       <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--color-text-subtle)', letterSpacing: '0.04em' }}>REAL</div>
                       <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--color-green)', letterSpacing: '0.04em' }}>YO</div>
+                      {score && <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--color-text-subtle)' }}>PTS</div>}
                       {visibleMembers.map(m => (
                         <div key={m.id} style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--color-text-muted)', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {m.display_name.split(' ')[0].slice(0,6).toUpperCase()}
                         </div>
                       ))}
-                      {score && <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--color-text-subtle)' }}>PTS</div>}
                       <div />
                     </div>
                   )}

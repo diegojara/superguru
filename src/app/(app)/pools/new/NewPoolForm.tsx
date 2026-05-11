@@ -46,7 +46,7 @@ export default function NewPoolForm() {
     try {
       const supabase = createClient()
       const startsAtUtc = new Date(`${startsAt}T05:00:00Z`).toISOString()
-      const endsAtUtc   = new Date(`${endsAt}T04:59:59Z`).toISOString()
+      const endsAtUtc   = new Date(`${endsAt}T23:59:59Z`).toISOString()
 
       const { data: poolId, error } = await (supabase.rpc as any)('create_pool', {
         p_name:                      name.trim(),

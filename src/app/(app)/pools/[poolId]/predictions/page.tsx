@@ -21,7 +21,7 @@ export default async function PredictionsPage({ params }: Props) {
     )
   }
 
-  const { data: poolMatches } = await supabase.from('pool_matches').select('match_id, matches(*)').eq('pool_id', poolId).order('kickoff_at', { foreignTable: 'matches', ascending: true }) as any
+  const { data: poolMatches } = await supabase.from('pool_matches').select('match_id, matches(*)').eq('pool_id', poolId).order('matches(kickoff_at)', { ascending: true }) as any
   const matches = (poolMatches ?? []).map((pm: any) => pm.matches).filter(Boolean)
   const { data: predictions } = await supabase.from('predictions').select('*').eq('pool_member_id', member.id) as any
   const { data: otherMemberships } = await supabase.from('pool_members').select('id, pool_id, pools(name)').eq('user_id', user.id).neq('pool_id', poolId) as any

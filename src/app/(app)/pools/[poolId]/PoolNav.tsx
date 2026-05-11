@@ -14,8 +14,7 @@ export default function PoolNav({ poolId, canAdmin }: Props) {
   const base = `/pools/${poolId}`
 
   const tabs = [
-    { href: base,                      label: 'Partidos' },
-    { href: `${base}/predictions`,     label: 'Mis pronósticos' },
+    { href: `${base}/predictions`,     label: 'Pronósticos' },
     { href: `${base}/leaderboard`,     label: 'Posiciones' },
     ...(canAdmin ? [{ href: `${base}/settings`, label: 'Configuración' }] : []),
   ]
@@ -27,7 +26,6 @@ export default function PoolNav({ poolId, canAdmin }: Props) {
       borderBottom: '1px solid var(--color-border)',
       paddingBottom: '0',
       overflowX: 'auto',
-      scrollbarWidth: 'none',
     }}>
       {tabs.map(tab => {
         const active = pathname === tab.href

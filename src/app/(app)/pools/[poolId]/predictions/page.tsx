@@ -1,8 +1,11 @@
+// src/app/(app)/pools/[poolId]/predictions/page.tsx
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import PredictionsClient from './PredictionsClient'
 
-interface Props { params: Promise<{ poolId: string }> }
+interface Props {
+  params: Promise<{ poolId: string }>
+}
 
 export default async function PredictionsPage({ params }: Props) {
   const { poolId } = await params
@@ -10,7 +13,11 @@ export default async function PredictionsPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: member } = await supabase.from('pool_members').select('id, display_name').eq('pool_id', poolId).eq('user_id', user.id).maybeSingle() as any
+  // Miembro actual
+  const { data: member } = await supabase
+    .from('pool_members').select('id, display_name')
+    .eq('pool_id', poolId).eq('user_id', user.id)
+    .maybeSingle() as any
 
   if (!member) {
     return (
@@ -21,10 +28,48 @@ export default async function PredictionsPage({ params }: Props) {
     )
   }
 
-  const { data: poolMatches } = await supabase.from('pool_matches').select('match_id, matches(*)').eq('pool_id', poolId).order('matches(kickoff_at)', { ascending: true }) as any
-  const matches = (poolMatches ?? []).map((pm: any) => pm.matches).filter(Boolean)
-  const { data: predictions } = await supabase.from('predictions').select('*').eq('pool_member_id', member.id) as any
-  const { data: otherMemberships } = await supabase.from('pool_members').select('id, pool_id, pools(name)').eq('user_id', user.id).neq('pool_id', poolId) as any
+  // Partidos de la Polla ordenados por fecha
+  const { data: poolMatches } = await supabase
+    .from('pool_matches').select('match_id, matches(*)')
+    .eq('pool_id', poolId)
+    .order('matches(kickoff_at)', { ascending: true }) as any
 
-  return <PredictionsClient poolId={poolId} poolMemberId={member.id} matches={matches ?? []} initialPredictions={predictions ?? []} otherMemberships={otherMemberships ?? []} />
+  const matches = (poolMatches ?? []).map((pm: any) => pm.matches).filter(Boolean)
+
+  // Mis pronósticos
+  const { data: myPredictions } = await supabase
+    .from('predictions').select('*')
+    .eq('pool_member_id', member.id) as any
+
+  // Mis puntos
+  const { data: myScores } = await supabase
+    .from('scores').select('match_id, points_earned, breakdown')
+    .eq('pool_member_id', member.id) as any
+
+  // Todos los participantes de la Polla (para el selector)
+  const { data: allMembers } = await supabase
+    .from('pool_members').select('id, display_name')
+    .eq('pool_id', poolId)
+    .neq('id', member.id) as any
+
+  // Pronósticos de todos los demás participantes (solo partidos no scheduled)
+  const otherMemberIds = (allMembers ?? []).map((m: any) => m.id)
+  const { data: otherPredictions } = otherMemberIds.length > 0
+    ? await supabase
+        .from('predictions').select('pool_member_id, match_id, predicted_home, predicted_away')
+        .in('pool_member_id', otherMemberIds)
+        .not('locked_at', 'is', null) as any
+    : { data: [] as any[] }
+
+  return (
+    <PredictionsClient
+      poolId={poolId}
+      myMember={{ id: member.id, display_name: member.display_name }}
+      matches={matches ?? []}
+      myPredictions={myPredictions ?? []}
+      myScores={myScores ?? []}
+      allMembers={allMembers ?? []}
+      otherPredictions={otherPredictions ?? []}
+    />
+  )
 }

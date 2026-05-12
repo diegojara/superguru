@@ -1,0 +1,55 @@
+# .github/workflows/sync-scores.yml
+# Sincroniza marcadores en vivo cada minuto.
+# GitHub Actions tiene un mínimo de 5 minutos entre ejecuciones programadas,
+# por lo que usamos un truco: corremos el job 12 veces con delays de 5s
+# para aproximarnos a una ejecución por minuto.
+
+name: Sync Live Scores
+
+on:
+  schedule:
+    # Cada 5 minutos — mínimo permitido por GitHub Actions
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # Permite ejecutar manualmente desde GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync scores (0s)
+        run: |
+          curl -s -X GET "${{ secrets.VERCEL_APP_URL }}/api/cron/sync-scores" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"
+
+      - name: Wait 60s
+        run: sleep 60
+
+      - name: Sync scores (60s)
+        run: |
+          curl -s -X GET "${{ secrets.VERCEL_APP_URL }}/api/cron/sync-scores" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+      - name: Wait 60s
+        run: sleep 60
+
+      - name: Sync scores (120s)
+        run: |
+          curl -s -X GET "${{ secrets.VERCEL_APP_URL }}/api/cron/sync-scores" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+      - name: Wait 60s
+        run: sleep 60
+
+      - name: Sync scores (180s)
+        run: |
+          curl -s -X GET "${{ secrets.VERCEL_APP_URL }}/api/cron/sync-scores" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+
+      - name: Wait 60s
+        run: sleep 60
+
+      - name: Sync scores (240s)
+        run: |
+          curl -s -X GET "${{ secrets.VERCEL_APP_URL }}/api/cron/sync-scores" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

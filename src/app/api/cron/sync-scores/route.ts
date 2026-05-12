@@ -70,6 +70,7 @@ export async function GET(request: Request) {
     )
 
     const allMatches: any[] = await matchesRes.json()
+    console.log('[sync-scores] allMatches count:', allMatches?.length, 'status:', matchesRes.status)
 
     // Filtrar: en vivo, o programados para las próximas 2 horas
     const activeMatches = (allMatches ?? []).filter(m => {

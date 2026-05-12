@@ -63,18 +63,30 @@ export async function GET(request: Request) {
     const now           = new Date()
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
 
+    // Traer partidos en vivo o programados para hoy
     const matchesRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&or=(status.in.(live,extra_time,penalties),and(status.eq.scheduled,kickoff_at.lte.${twoHoursLater.toISOString()}))`,
+      `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&status=in.(scheduled,live,extra_time,penalties)`,
       { headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY } }
     )
 
-    const activeMatches: any[] = await matchesRes.json()
-    if (!activeMatches || activeMatches.length === 0) {
+    const allMatches: any[] = await matchesRes.json()
+
+    // Filtrar: en vivo, o programados para las próximas 2 horas
+    const activeMatches = (allMatches ?? []).filter(m => {
+      if (['live', 'extra_time', 'penalties'].includes(m.status)) return true
+      if (m.status === 'scheduled') {
+        const kickoff = new Date(m.kickoff_at).getTime()
+        return kickoff <= twoHoursLater.getTime() && kickoff >= now.getTime() - 10 * 60 * 1000
+      }
+      return false
+    })
+
+    if (activeMatches.length === 0) {
       return NextResponse.json({ ok: true, message: 'No hay partidos activos', updated: 0 })
     }
 
-    const betplayMatches = activeMatches.filter(m => m.group_name === 'Liga BetPlay')
-    const otherMatches   = activeMatches.filter(m => m.group_name !== 'Liga BetPlay')
+    const betplayMatches = activeMatches.filter((m: any) => m.group_name === 'Liga BetPlay')
+    const otherMatches   = activeMatches.filter((m: any) => m.group_name !== 'Liga BetPlay')
     let updated = 0
 
     // --- BetPlay via ESPN ---

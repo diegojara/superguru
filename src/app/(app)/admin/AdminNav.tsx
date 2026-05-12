@@ -31,6 +31,7 @@ export default function AdminNav({ unreadNotifications }: { unreadNotifications:
             alignItems: 'center',
             gap: '6px',
             transition: 'color 0.15s',
+            scrollbarWidth: 'none',
           }}>
             {tab.label}
             {tab.badge ? (

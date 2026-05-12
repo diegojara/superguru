@@ -47,7 +47,17 @@ function teamCode(name: string): string {
     'Francia': 'FRA','Senegal': 'SEN','Iraq': 'IRQ','Noruega': 'NOR',
     'Argentina': 'ARG','Argelia': 'ALG','Austria': 'AUT','Jordania': 'JOR',
     'Portugal': 'POR','Congo DR': 'COD','Uzbekistán': 'UZB','Colombia': 'COL',
-    'Inglaterra': 'ENG','Croacia': 'CRO','Ghana': 'GHA','Panamá': 'PAN',
+    'Inglaterra': 'ENG','Croacia': 'CRO','Ghana': 'GHA','Panamá': 'PAN', 'Atlético Nacional': 'Nacional',
+    'Inter Bogotá': 'Inter',
+    'Internacional de Bogotá': 'Inter',
+    'Independiente Santa Fe': 'Santa Fe',
+    'América de Cali': 'América',
+    'Deportivo Pasto': 'Pasto',
+    'Deportes Tolima': 'Tolima',
+    'Junior de Barranquilla': 'Junior',
+    'Once Caldas': 'Caldas',
+    'Arsenal': 'Arsenal',
+    'PSG': 'PSG',
   }
   if (o[name]) return o[name]
   const p1 = name.match(/^1ro Grupo ([A-Z])$/); if (p1) return `1° ${p1[1]}`

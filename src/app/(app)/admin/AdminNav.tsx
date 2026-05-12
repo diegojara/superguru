@@ -14,7 +14,7 @@ export default function AdminNav({ unreadNotifications }: { unreadNotifications:
   ]
 
   return (
-    <nav style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto' }}>
+    <nav style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--color-border)', overflowX: 'auto', scrollbarWidth: 'none', }}>
       {tabs.map(tab => {
         const active = tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href)
         return (

@@ -65,7 +65,7 @@ export async function GET(request: Request) {
 
     // Traer partidos en vivo o programados para hoy
     const matchesRes = await fetch(
-     `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&status=neq.finished`
+     `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&status=neq.finished`,
       { headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY } }
     )
 

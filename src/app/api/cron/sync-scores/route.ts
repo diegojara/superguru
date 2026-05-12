@@ -68,12 +68,12 @@ export async function GET(request: Request) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
     console.log('[sync-scores] URL:', SUPABASE_URL?.slice(0,30), 'KEY:', SUPABASE_KEY?.slice(0,10))
     
-    const { data: allMatches } = await supabase
+    const { data: allMatches, error } = await supabase
       .from('matches')
       .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')
       .neq('status', 'finished')
 
-    console.log('[sync-scores] allMatches count:', allMatches?.length)
+    console.log('[sync-scores] allMatches:', JSON.stringify(allMatches), 'error:', JSON.stringify(error))
 
     const activeMatches = (allMatches ?? []).filter((m: any) => {
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true

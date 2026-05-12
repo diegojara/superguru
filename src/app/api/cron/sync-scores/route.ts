@@ -68,6 +68,9 @@ export async function GET(request: Request) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
     console.log('[sync-scores] URL:', SUPABASE_URL?.slice(0,30), 'KEY:', SUPABASE_KEY?.slice(0,10))
     
+    const { count } = await supabase.from('matches').select('*', { count: 'exact', head: true })
+    console.log('[sync-scores] total matches:', count)
+      
     const { data: allMatches, error } = await supabase
       .from('matches')
       .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')

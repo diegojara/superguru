@@ -1,144 +1,171 @@
 // src/app/api/cron/sync-scores/route.ts
-// Sincroniza marcadores en vivo desde api-football.com
-// Se invoca desde GitHub Actions cada minuto durante partidos en vivo.
+// Sincroniza marcadores en vivo desde ESPN (BetPlay) y api-football (Champions/Mundial)
 
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
 
+const CRON_SECRET      = process.env.CRON_SECRET!
 const FOOTBALL_API_KEY = process.env.FOOTBALL_API_KEY!
 const FOOTBALL_API_URL = 'https://v3.football.api-sports.io'
+const SUPABASE_URL     = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_KEY     = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Mapeo de status de api-football → status de SuperGurú
-function mapStatus(short: string): string {
+function mapEspnStatus(status: string): string {
+  switch (status) {
+    case 'STATUS_SCHEDULED':   return 'scheduled'
+    case 'STATUS_IN_PROGRESS': return 'live'
+    case 'STATUS_HALFTIME':    return 'live'
+    case 'STATUS_END_PERIOD':  return 'live'
+    case 'STATUS_FINAL':       return 'finished'
+    case 'STATUS_FULL_TIME':   return 'finished'
+    case 'STATUS_EXTRA_TIME':  return 'extra_time'
+    case 'STATUS_PENALTY':     return 'penalties'
+    default:                   return 'scheduled'
+  }
+}
+
+function mapApiStatus(short: string): string {
   switch (short) {
     case 'NS':  return 'scheduled'
-    case '1H':
-    case 'HT':
-    case '2H':
-    case 'ET':  return 'live'
+    case '1H': case 'HT': case '2H': case 'ET': return 'live'
     case 'BT':  return 'extra_time'
     case 'P':   return 'penalties'
-    case 'FT':
-    case 'AET':
-    case 'PEN': return 'finished'
+    case 'FT': case 'AET': case 'PEN': return 'finished'
     default:    return 'scheduled'
   }
 }
 
+function normalize(name: string): string {
+  return name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '').trim()
+}
+
+async function callRpc(fnName: string, params: Record<string, any>) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fnName}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'apikey': SUPABASE_KEY,
+    },
+    body: JSON.stringify(params),
+  })
+  return res.ok
+}
+
 export async function GET(request: Request) {
-  // Verificar token de seguridad
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
   try {
-    const supabase = createServiceClient()
-
-    // Obtener partidos que están en vivo o que empiezan en las próximas 2 horas
-    const now = new Date()
+    const now           = new Date()
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
 
-    const { data: activeMatches } = await supabase
-      .from('matches')
-      .select('id, home_team, away_team, kickoff_at, status, home_score, away_score')
-      .or(`status.in.(live,extra_time,penalties),and(status.eq.scheduled,kickoff_at.lte.${twoHoursLater.toISOString()})`)
+    const matchesRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&or=(status.in.(live,extra_time,penalties),and(status.eq.scheduled,kickoff_at.lte.${twoHoursLater.toISOString()}))`,
+      { headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY } }
+    )
 
+    const activeMatches: any[] = await matchesRes.json()
     if (!activeMatches || activeMatches.length === 0) {
       return NextResponse.json({ ok: true, message: 'No hay partidos activos', updated: 0 })
     }
 
-    // Obtener fecha de hoy para la consulta a la API
-    const today = now.toISOString().split('T')[0]
-
-    // Consultar api-football — traer todos los fixtures de hoy
-    // Usamos la liga del Mundial 2026 (ID: 1) o Champions League (ID: 2) según corresponda
-    // Para el Mundial 2026 el league ID es 1
-    const leagueIds = [1, 2] // Mundial + Champions League para pruebas
-    
-    const allFixtures: any[] = []
-    
-    for (const leagueId of leagueIds) {
-      const res = await fetch(
-        `${FOOTBALL_API_URL}/fixtures?date=${today}&league=${leagueId}&season=2026`,
-        {
-          headers: {
-            'x-apisports-key': FOOTBALL_API_KEY,
-          },
-        }
-      )
-      
-      if (!res.ok) continue
-      
-      const data = await res.json()
-      if (data.response) allFixtures.push(...data.response)
-    }
-
-    if (allFixtures.length === 0) {
-      return NextResponse.json({ ok: true, message: 'No hay fixtures en la API para hoy', updated: 0 })
-    }
-
-    // Cruzar por nombre de equipos
+    const betplayMatches = activeMatches.filter(m => m.group_name === 'Liga BetPlay')
+    const otherMatches   = activeMatches.filter(m => m.group_name !== 'Liga BetPlay')
     let updated = 0
 
-    for (const match of activeMatches) {
-      // Buscar el fixture correspondiente en la API
-      const fixture = allFixtures.find((f: any) => {
-        const homeMatches = normalizeTeamName(f.teams.home.name) === normalizeTeamName(match.home_team)
-        const awayMatches = normalizeTeamName(f.teams.away.name) === normalizeTeamName(match.away_team)
-        return homeMatches && awayMatches
-      })
+    // --- BetPlay via ESPN ---
+    if (betplayMatches.length > 0) {
+      const espnRes = await fetch(
+        'https://site.api.espn.com/apis/site/v2/sports/soccer/col.1/scoreboard',
+        { headers: { 'User-Agent': 'Mozilla/5.0' } }
+      )
 
-      if (!fixture) continue
+      if (espnRes.ok) {
+        const espnData   = await espnRes.json()
+        const espnEvents = espnData.events ?? []
 
-      const apiStatus    = mapStatus(fixture.fixture.status.short)
-      const apiHomeScore = fixture.goals.home ?? null
-      const apiAwayScore = fixture.goals.away ?? null
-      const wentToExtra  = ['AET', 'PEN'].includes(fixture.fixture.status.short)
-      const wentToPens   = fixture.fixture.status.short === 'PEN'
+        for (const match of betplayMatches) {
+          const event = espnEvents.find((e: any) => {
+            const comp = e.competitions[0]
+            const home = comp.competitors.find((t: any) => t.homeAway === 'home')
+            const away = comp.competitors.find((t: any) => t.homeAway === 'away')
+            return normalize(home?.team?.displayName ?? '') === normalize(match.home_team) &&
+                   normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
+          })
+          if (!event) continue
 
-      // Solo actualizar si algo cambió
-      const scoreChanged  = apiHomeScore !== match.home_score || apiAwayScore !== match.away_score
-      const statusChanged = apiStatus !== match.status
+          const comp      = event.competitions[0]
+          const home      = comp.competitors.find((t: any) => t.homeAway === 'home')
+          const away      = comp.competitors.find((t: any) => t.homeAway === 'away')
+          const newStatus = mapEspnStatus(comp.status.type.name)
+          const homeScore = parseInt(home?.score ?? '0') || 0
+          const awayScore = parseInt(away?.score ?? '0') || 0
 
-      if (!scoreChanged && !statusChanged) continue
+          if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
 
-      // Usar update_match_score para actualizar y recalcular puntos
-      const { error } = await supabase.rpc('update_match_score', {
-        p_match_id:           match.id,
-        p_home_score:         apiHomeScore ?? 0,
-        p_away_score:         apiAwayScore ?? 0,
-        p_status:             apiStatus,
-        p_went_to_extra_time: wentToExtra,
-        p_went_to_penalties:  wentToPens,
-      })
+          const ok = await callRpc('update_match_score', {
+            p_match_id:           match.id,
+            p_home_score:         homeScore,
+            p_away_score:         awayScore,
+            p_status:             newStatus,
+            p_went_to_extra_time: comp.status.type.name === 'STATUS_EXTRA_TIME',
+            p_went_to_penalties:  comp.status.type.name === 'STATUS_PENALTY',
+          })
+          if (ok) updated++
+        }
+      }
+    }
 
-      if (!error) {
-        updated++
-        console.log(`Actualizado: ${match.home_team} vs ${match.away_team} — ${apiHomeScore}-${apiAwayScore} (${apiStatus})`)
+    // --- Champions / Mundial via api-football ---
+    if (otherMatches.length > 0) {
+      const today = now.toISOString().split('T')[0]
+      for (const leagueId of [1, 2]) {
+        const apiRes = await fetch(
+          `${FOOTBALL_API_URL}/fixtures?date=${today}&league=${leagueId}&season=2026`,
+          { headers: { 'x-apisports-key': FOOTBALL_API_KEY } }
+        )
+        if (!apiRes.ok) continue
+        const fixtures: any[] = (await apiRes.json()).response ?? []
+
+        for (const match of otherMatches) {
+          const f = fixtures.find((fx: any) =>
+            normalize(fx.teams.home.name) === normalize(match.home_team) &&
+            normalize(fx.teams.away.name) === normalize(match.away_team)
+          )
+          if (!f) continue
+
+          const newStatus = mapApiStatus(f.fixture.status.short)
+          const homeScore = f.goals.home ?? 0
+          const awayScore = f.goals.away ?? 0
+
+          if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
+
+          const ok = await callRpc('update_match_score', {
+            p_match_id:           match.id,
+            p_home_score:         homeScore,
+            p_away_score:         awayScore,
+            p_status:             newStatus,
+            p_went_to_extra_time: ['AET','PEN'].includes(f.fixture.status.short),
+            p_went_to_penalties:  f.fixture.status.short === 'PEN',
+          })
+          if (ok) updated++
+        }
       }
     }
 
     return NextResponse.json({
-      ok: true,
-      updated,
-      fixtures_found: allFixtures.length,
-      active_matches: activeMatches.length,
-      timestamp: new Date().toISOString(),
+      ok: true, updated,
+      betplay_active: betplayMatches.length,
+      other_active:   otherMatches.length,
+      timestamp:      now.toISOString(),
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[sync-scores]', error)
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+    return NextResponse.json({ error: error.message ?? 'Error interno' }, { status: 500 })
   }
-}
-
-// Normalizar nombres de equipos para comparación
-function normalizeTeamName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // quitar tildes
-    .replace(/[^a-z0-9\s]/g, '')     // quitar caracteres especiales
-    .trim()
 }

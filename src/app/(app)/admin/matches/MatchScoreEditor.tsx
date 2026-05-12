@@ -23,6 +23,10 @@ const STATUS_COLORS: Record<MatchStatus, string> = {
   finished:   'var(--color-text-muted)',
 }
 
+function isPlaceholder(name: string): boolean {
+  return /^(Semi|Final|Gan\.|Perd\.)/.test(name)
+}
+
 export default function MatchScoreEditor({ match }: { match: Match }) {
   const router = useRouter()
   const supabase = createClient()
@@ -35,6 +39,32 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState<string | null>(null)
   const [saved, setSaved]         = useState(false)
+
+  // Edición de nombres de equipos placeholder
+  const [homeTeam, setHomeTeam]   = useState(match.home_team)
+  const [awayTeam, setAwayTeam]   = useState(match.away_team)
+  const [savingNames, setSavingNames] = useState(false)
+  const [savedNames, setSavedNames]   = useState(false)
+
+  const hasPlaceholders = isPlaceholder(match.home_team) || isPlaceholder(match.away_team)
+
+  async function handleSaveNames() {
+    if (!homeTeam.trim() || !awayTeam.trim()) return
+    setSavingNames(true)
+    try {
+      const { error: err } = await (supabase.from('matches') as any)
+        .update({ home_team: homeTeam.trim(), away_team: awayTeam.trim() })
+        .eq('id', match.id)
+      if (err) throw err
+      setSavedNames(true)
+      setTimeout(() => setSavedNames(false), 2000)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message ?? 'Error al guardar nombres.')
+    } finally {
+      setSavingNames(false)
+    }
+  }
 
   async function handleSave() {
     const home = parseInt(homeScore)
@@ -77,6 +107,7 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
       flexDirection: 'column',
       gap: '12px',
     }}>
+      {/* Cabecera */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ fontSize: '0.9375rem', fontWeight: 500 }}>
           {match.home_team} vs {match.away_team}
@@ -91,33 +122,79 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
         </div>
       </div>
 
+      {/* Editor de nombres placeholder */}
+      {hasPlaceholders && (
+        <div style={{
+          padding: '10px 14px',
+          background: 'rgba(245, 158, 11, 0.06)',
+          border: '1px solid rgba(245, 158, 11, 0.2)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-gold)', marginBottom: '2px' }}>
+            Actualizar equipos clasificados:
+          </p>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              className="input"
+              value={homeTeam}
+              onChange={e => setHomeTeam(e.target.value)}
+              placeholder="Equipo local"
+              style={{ flex: 1, minWidth: '140px' }}
+            />
+            <span style={{ color: 'var(--color-text-muted)' }}>vs</span>
+            <input
+              type="text"
+              className="input"
+              value={awayTeam}
+              onChange={e => setAwayTeam(e.target.value)}
+              placeholder="Equipo visitante"
+              style={{ flex: 1, minWidth: '140px' }}
+            />
+            <button
+              onClick={handleSaveNames}
+              disabled={savingNames}
+              style={{
+                padding: '10px 16px',
+                background: savedNames ? 'var(--color-green-deep)' : 'var(--color-gold)',
+                color: savedNames ? 'var(--color-green)' : '#000',
+                border: 'none',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {savingNames ? '…' : savedNames ? '✓ Guardado' : 'Actualizar'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Controles de marcador */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="number" min={0} max={30} value={homeScore}
+          <input type="number" min={0} max={30} value={homeScore}
             onChange={e => { setHomeScore(e.target.value); setSaved(false) }}
             className="input"
             style={{ width: '64px', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.4rem' }}
-            placeholder="–"
-          />
+            placeholder="–" />
           <span style={{ color: 'var(--color-text-muted)', fontSize: '1.25rem' }}>–</span>
-          <input
-            type="number" min={0} max={30} value={awayScore}
+          <input type="number" min={0} max={30} value={awayScore}
             onChange={e => { setAwayScore(e.target.value); setSaved(false) }}
             className="input"
             style={{ width: '64px', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: '1.4rem' }}
-            placeholder="–"
-          />
+            placeholder="–" />
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <label className="label">Estado</label>
-          <select
-            value={status}
-            onChange={e => { setStatus(e.target.value as MatchStatus); setSaved(false) }}
-            className="input"
-            style={{ width: 'auto', paddingRight: '32px' }}
-          >
+          <select value={status} onChange={e => { setStatus(e.target.value as MatchStatus); setSaved(false) }}
+            className="input" style={{ width: 'auto', paddingRight: '32px' }}>
             {STATUS_OPTIONS.map(o => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
@@ -135,16 +212,12 @@ export default function MatchScoreEditor({ match }: { match: Match }) {
           </label>
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-primary"
+        <button onClick={handleSave} disabled={saving} className="btn-primary"
           style={{
             width: 'auto', padding: '10px 20px',
             background: saved ? 'var(--color-green-deep)' : 'var(--color-gold)',
             color: saved ? 'var(--color-green)' : '#000',
-          }}
-        >
+          }}>
           {saving ? 'Guardando…' : saved ? '✓ Guardado' : 'Guardar'}
         </button>
       </div>

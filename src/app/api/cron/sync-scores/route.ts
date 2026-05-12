@@ -2,6 +2,7 @@
 // Sincroniza marcadores en vivo desde ESPN (BetPlay) y api-football (Champions/Mundial)
 
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 const CRON_SECRET      = process.env.CRON_SECRET!
 const FOOTBALL_API_KEY = process.env.FOOTBALL_API_KEY!
@@ -64,7 +65,6 @@ export async function GET(request: Request) {
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
 
 // Traer partidos no finalizados via Supabase service role
-    const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
     console.log('[sync-scores] URL:', SUPABASE_URL?.slice(0,30), 'KEY:', SUPABASE_KEY?.slice(0,10))
     

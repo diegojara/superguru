@@ -63,17 +63,18 @@ export async function GET(request: Request) {
     const now           = new Date()
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
 
-    // Traer partidos en vivo o programados para hoy
-    const matchesRes = await fetch(
-     `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&status=neq.finished`,
-      { headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY } }
-    )
+// Traer partidos no finalizados via Supabase service role
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+    
+    const { data: allMatches } = await supabase
+      .from('matches')
+      .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')
+      .neq('status', 'finished')
 
-    const allMatches: any[] = await matchesRes.json()
-    console.log('[sync-scores] allMatches count:', allMatches?.length, 'status:', matchesRes.status)
+    console.log('[sync-scores] allMatches count:', allMatches?.length)
 
-    // Filtrar: en vivo, o programados para las próximas 2 horas
-    const activeMatches = (allMatches ?? []).filter(m => {
+    const activeMatches = (allMatches ?? []).filter((m: any) => {
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true
       if (m.status === 'scheduled') {
         const kickoff = new Date(m.kickoff_at).getTime()

@@ -66,6 +66,7 @@ export async function GET(request: Request) {
 // Traer partidos no finalizados via Supabase service role
     const { createClient } = await import('@supabase/supabase-js')
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+    console.log('[sync-scores] URL:', SUPABASE_URL?.slice(0,30), 'KEY:', SUPABASE_KEY?.slice(0,10))
     
     const { data: allMatches } = await supabase
       .from('matches')

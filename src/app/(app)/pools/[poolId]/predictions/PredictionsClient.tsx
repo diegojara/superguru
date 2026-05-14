@@ -55,6 +55,7 @@ function teamCode(name: string): string {
     'Deportivo Pasto': 'Pasto',
     'Deportes Tolima': 'Tolima',
     'Junior de Barranquilla': 'Junior',
+'Atlético Junior': 'Junior',
     'Once Caldas': 'Caldas',
     'Arsenal': 'Arsenal',
     'PSG': 'PSG',

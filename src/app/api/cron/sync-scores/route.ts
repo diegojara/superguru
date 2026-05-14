@@ -57,12 +57,14 @@ export async function GET(request: Request) {
     const now           = new Date()
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
 
-    // Traer partidos en vivo o programados para hoy
-    const matchesRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/matches?select=id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name&status=in.(scheduled,live,extra_time,penalties)`,
-      { headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY } }
-    )
+   // Traer partidos no finalizados
+    const { data: allMatches } = await supabase
+      .from('matches')
+      .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')
+      .neq('status', 'finished')
 
+    console.log('[sync-scores] allMatches count:', allMatches?.length)
+    
     const { data: allMatches } = await supabase
       .from('matches')
       .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')

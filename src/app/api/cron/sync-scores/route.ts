@@ -63,7 +63,12 @@ export async function GET(request: Request) {
       { headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY } }
     )
 
-    const allMatches: any[] = await matchesRes.json()
+    const { data: allMatches } = await supabase
+      .from('matches')
+      .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')
+      .neq('status', 'finished')
+
+    console.log('[sync-scores] allMatches count:', allMatches?.length)
 
     // Filtrar: en vivo, o programados para las próximas 2 horas
     const activeMatches = (allMatches ?? []).filter(m => {

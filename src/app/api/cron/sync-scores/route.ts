@@ -54,17 +54,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const now           = new Date()
+const now           = new Date()
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-
-   // Traer partidos no finalizados
-    const { data: allMatches } = await supabase
-      .from('matches')
-      .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')
-      .neq('status', 'finished')
-
-    console.log('[sync-scores] allMatches count:', allMatches?.length)
     
+    // Traer partidos no finalizados
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
     const { data: allMatches } = await supabase
       .from('matches')
       .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')

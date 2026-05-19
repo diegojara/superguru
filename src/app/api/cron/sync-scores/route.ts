@@ -71,7 +71,7 @@ const now           = new Date()
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true
       if (m.status === 'scheduled') {
         const kickoff = new Date(m.kickoff_at).getTime()
-        return kickoff <= twoHoursLater.getTime() && kickoff >= now.getTime() - 10 * 60 * 1000
+        return kickoff <= twoHoursLater.getTime() && kickoff >= now.getTime() - 150 * 60 * 1000
       }
       return false
     })

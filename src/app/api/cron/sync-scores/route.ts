@@ -67,11 +67,11 @@ const now           = new Date()
     console.log('[sync-scores] allMatches count:', allMatches?.length)
 
     // Filtrar: en vivo, o programados para las próximas 2 horas
-    const activeMatches = (allMatches ?? []).filter(m => {
+    const activeMatches = (allMatches ?? []).filter((m: any) => {
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true
       if (m.status === 'scheduled') {
         const kickoff = new Date(m.kickoff_at).getTime()
-        return kickoff <= twoHoursLater.getTime() && kickoff >= now.getTime() - 150 * 60 * 1000
+        return kickoff <= twoHoursLater.getTime()
       }
       return false
     })

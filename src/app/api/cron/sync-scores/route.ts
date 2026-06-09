@@ -1,14 +1,12 @@
 // src/app/api/cron/sync-scores/route.ts
-// Sincroniza marcadores en vivo desde ESPN (BetPlay) y api-football (Champions/Mundial)
+// Sincroniza marcadores en vivo desde ESPN (Mundial 2026)
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const CRON_SECRET      = process.env.CRON_SECRET!
-const FOOTBALL_API_KEY = process.env.FOOTBALL_API_KEY!
-const FOOTBALL_API_URL = 'https://v3.football.api-sports.io'
-const SUPABASE_URL     = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_KEY     = process.env.SUPABASE_SERVICE_ROLE_KEY!
+const CRON_SECRET  = process.env.CRON_SECRET!
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 function mapEspnStatus(status: string): string {
   switch (status) {
@@ -21,17 +19,6 @@ function mapEspnStatus(status: string): string {
     case 'STATUS_EXTRA_TIME':  return 'extra_time'
     case 'STATUS_PENALTY':     return 'penalties'
     default:                   return 'scheduled'
-  }
-}
-
-function mapApiStatus(short: string): string {
-  switch (short) {
-    case 'NS':  return 'scheduled'
-    case '1H': case 'HT': case '2H': case 'ET': return 'live'
-    case 'BT':  return 'extra_time'
-    case 'P':   return 'penalties'
-    case 'FT': case 'AET': case 'PEN': return 'finished'
-    default:    return 'scheduled'
   }
 }
 
@@ -54,19 +41,17 @@ export async function GET(request: Request) {
   }
 
   try {
-const now           = new Date()
+    const now           = new Date()
     const twoHoursLater = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-    
-    // Traer partidos no finalizados
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
     const { data: allMatches } = await supabase
       .from('matches')
-      .select('id,home_team,away_team,kickoff_at,status,home_score,away_score,group_name')
+      .select('id,home_team,away_team,kickoff_at,status,home_score,away_score')
       .neq('status', 'finished')
 
     console.log('[sync-scores] allMatches count:', allMatches?.length)
 
-    // Filtrar: en vivo, o programados para las próximas 2 horas
     const activeMatches = (allMatches ?? []).filter((m: any) => {
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true
       if (m.status === 'scheduled') {
@@ -80,99 +65,63 @@ const now           = new Date()
       return NextResponse.json({ ok: true, message: 'No hay partidos activos', updated: 0 })
     }
 
-const worldcupMatches = activeMatches.filter((m: any) => m.group_name !== 'Liga BetPlay')
+    console.log('[sync-scores] activeMatches:', activeMatches.length)
+
+    const espnRes = await fetch(
+      'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
+      { headers: { 'User-Agent': 'Mozilla/5.0' } }
+    )
+
+    if (!espnRes.ok) {
+      return NextResponse.json({ ok: false, error: `ESPN respondió ${espnRes.status}`, active: activeMatches.length })
+    }
+
+    const espnData   = await espnRes.json()
+    const espnEvents = espnData.events ?? []
+    console.log('[sync-scores] ESPN events:', espnEvents.length)
+
     let updated = 0
 
-    // --- BetPlay via ESPN ---
-    if (betplayMatches.length > 0) {
-      const espnRes = await fetch(
-        'https://site.api.espn.com/apis/site/v2/sports/soccer/col.1/scoreboard',
-        { headers: { 'User-Agent': 'Mozilla/5.0' } }
-      )
+    for (const match of activeMatches) {
+      const event = espnEvents.find((e: any) => {
+        const comp = e.competitions[0]
+        const home = comp.competitors.find((t: any) => t.homeAway === 'home')
+        const away = comp.competitors.find((t: any) => t.homeAway === 'away')
+        return normalize(home?.team?.displayName ?? '') === normalize(match.home_team) &&
+               normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
+      })
 
-      if (espnRes.ok) {
-        const espnData   = await espnRes.json()
-        const espnEvents = espnData.events ?? []
+      if (!event) continue
 
-        for (const match of betplayMatches) {
-          const event = espnEvents.find((e: any) => {
-            const comp = e.competitions[0]
-            const home = comp.competitors.find((t: any) => t.homeAway === 'home')
-            const away = comp.competitors.find((t: any) => t.homeAway === 'away')
-            return normalize(home?.team?.displayName ?? '') === normalize(match.home_team) &&
-                   normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
-          })
-          if (!event) continue
+      const comp      = event.competitions[0]
+      const home      = comp.competitors.find((t: any) => t.homeAway === 'home')
+      const away      = comp.competitors.find((t: any) => t.homeAway === 'away')
+      const newStatus = mapEspnStatus(comp.status.type.name)
+      const homeScore = parseInt(home?.score ?? '0') || 0
+      const awayScore = parseInt(away?.score ?? '0') || 0
 
-          const comp      = event.competitions[0]
-          const home      = comp.competitors.find((t: any) => t.homeAway === 'home')
-          const away      = comp.competitors.find((t: any) => t.homeAway === 'away')
-          const newStatus = mapEspnStatus(comp.status.type.name)
-          const homeScore = parseInt(home?.score ?? '0') || 0
-          const awayScore = parseInt(away?.score ?? '0') || 0
+      if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
 
-          if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
+      const ok = await callRpc('update_match_score', {
+        p_match_id:           match.id,
+        p_home_score:         homeScore,
+        p_away_score:         awayScore,
+        p_status:             newStatus,
+        p_went_to_extra_time: comp.status.type.name === 'STATUS_EXTRA_TIME',
+        p_went_to_penalties:  comp.status.type.name === 'STATUS_PENALTY',
+      })
 
-          const ok = await callRpc('update_match_score', {
-            p_match_id:           match.id,
-            p_home_score:         homeScore,
-            p_away_score:         awayScore,
-            p_status:             newStatus,
-            p_went_to_extra_time: comp.status.type.name === 'STATUS_EXTRA_TIME',
-            p_went_to_penalties:  comp.status.type.name === 'STATUS_PENALTY',
-          })
-          if (ok) updated++
-        }
+      if (ok) {
+        updated++
+        console.log(`[sync-scores] Updated: ${match.home_team} vs ${match.away_team} ${homeScore}-${awayScore} (${newStatus})`)
       }
     }
 
-  // --- Mundial via ESPN ---
-    if (worldcupMatches.length > 0) {
-      const espnRes = await fetch(
-        'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
-        { headers: { 'User-Agent': 'Mozilla/5.0' } }
-      )
-
-      if (espnRes.ok) {
-        const espnData   = await espnRes.json()
-        const espnEvents = espnData.events ?? []
-
-        for (const match of worldcupMatches) {
-          const event = espnEvents.find((e: any) => {
-            const comp = e.competitions[0]
-            const home = comp.competitors.find((t: any) => t.homeAway === 'home')
-            const away = comp.competitors.find((t: any) => t.homeAway === 'away')
-            return normalize(home?.team?.displayName ?? '') === normalize(match.home_team) &&
-                   normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
-          })
-          if (!event) continue
-
-          const comp      = event.competitions[0]
-          const home      = comp.competitors.find((t: any) => t.homeAway === 'home')
-          const away      = comp.competitors.find((t: any) => t.homeAway === 'away')
-          const newStatus = mapEspnStatus(comp.status.type.name)
-          const homeScore = parseInt(home?.score ?? '0') || 0
-          const awayScore = parseInt(away?.score ?? '0') || 0
-
-          if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
-
-          const ok = await callRpc('update_match_score', {
-            p_match_id:           match.id,
-            p_home_score:         homeScore,
-            p_away_score:         awayScore,
-            p_status:             newStatus,
-            p_went_to_extra_time: comp.status.type.name === 'STATUS_EXTRA_TIME',
-            p_went_to_penalties:  comp.status.type.name === 'STATUS_PENALTY',
-          })
-          if (ok) updated++
-        }
-      }
-    }
     return NextResponse.json({
       ok: true, updated,
-      betplay_active: betplayMatches.length,
-      other_active:   otherMatches.length,
-      timestamp:      now.toISOString(),
+      active: activeMatches.length,
+      espn_events: espnEvents.length,
+      timestamp: now.toISOString(),
     })
 
   } catch (error: any) {

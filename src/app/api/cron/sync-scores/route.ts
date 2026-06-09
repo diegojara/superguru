@@ -80,8 +80,7 @@ const now           = new Date()
       return NextResponse.json({ ok: true, message: 'No hay partidos activos', updated: 0 })
     }
 
-    const betplayMatches = activeMatches.filter((m: any) => m.group_name === 'Liga BetPlay')
-    const otherMatches   = activeMatches.filter((m: any) => m.group_name !== 'Liga BetPlay')
+const worldcupMatches = activeMatches.filter((m: any) => m.group_name !== 'Liga BetPlay')
     let updated = 0
 
     // --- BetPlay via ESPN ---

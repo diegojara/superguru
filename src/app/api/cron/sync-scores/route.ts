@@ -126,27 +126,33 @@ const worldcupMatches = activeMatches.filter((m: any) => m.group_name !== 'Liga 
       }
     }
 
-    // --- Champions / Mundial via api-football ---
-    if (otherMatches.length > 0) {
-      const today = now.toISOString().split('T')[0]
-      for (const leagueId of [1, 2]) {
-        const apiRes = await fetch(
-          `${FOOTBALL_API_URL}/fixtures?date=${today}&league=${leagueId}&season=2026`,
-          { headers: { 'x-apisports-key': FOOTBALL_API_KEY } }
-        )
-        if (!apiRes.ok) continue
-        const fixtures: any[] = (await apiRes.json()).response ?? []
+  // --- Mundial via ESPN ---
+    if (worldcupMatches.length > 0) {
+      const espnRes = await fetch(
+        'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
+        { headers: { 'User-Agent': 'Mozilla/5.0' } }
+      )
 
-        for (const match of otherMatches) {
-          const f = fixtures.find((fx: any) =>
-            normalize(fx.teams.home.name) === normalize(match.home_team) &&
-            normalize(fx.teams.away.name) === normalize(match.away_team)
-          )
-          if (!f) continue
+      if (espnRes.ok) {
+        const espnData   = await espnRes.json()
+        const espnEvents = espnData.events ?? []
 
-          const newStatus = mapApiStatus(f.fixture.status.short)
-          const homeScore = f.goals.home ?? 0
-          const awayScore = f.goals.away ?? 0
+        for (const match of worldcupMatches) {
+          const event = espnEvents.find((e: any) => {
+            const comp = e.competitions[0]
+            const home = comp.competitors.find((t: any) => t.homeAway === 'home')
+            const away = comp.competitors.find((t: any) => t.homeAway === 'away')
+            return normalize(home?.team?.displayName ?? '') === normalize(match.home_team) &&
+                   normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
+          })
+          if (!event) continue
+
+          const comp      = event.competitions[0]
+          const home      = comp.competitors.find((t: any) => t.homeAway === 'home')
+          const away      = comp.competitors.find((t: any) => t.homeAway === 'away')
+          const newStatus = mapEspnStatus(comp.status.type.name)
+          const homeScore = parseInt(home?.score ?? '0') || 0
+          const awayScore = parseInt(away?.score ?? '0') || 0
 
           if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
 
@@ -155,14 +161,13 @@ const worldcupMatches = activeMatches.filter((m: any) => m.group_name !== 'Liga 
             p_home_score:         homeScore,
             p_away_score:         awayScore,
             p_status:             newStatus,
-            p_went_to_extra_time: ['AET','PEN'].includes(f.fixture.status.short),
-            p_went_to_penalties:  f.fixture.status.short === 'PEN',
+            p_went_to_extra_time: comp.status.type.name === 'STATUS_EXTRA_TIME',
+            p_went_to_penalties:  comp.status.type.name === 'STATUS_PENALTY',
           })
           if (ok) updated++
         }
       }
     }
-
     return NextResponse.json({
       ok: true, updated,
       betplay_active: betplayMatches.length,

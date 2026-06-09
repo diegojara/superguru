@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   try {
     const res = await fetch(
-      'https://site.api.espn.com/apis/site/v2/sports/soccer/col.1/scoreboard',
+'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
       { headers: { 'User-Agent': 'Mozilla/5.0' } }
     )
 

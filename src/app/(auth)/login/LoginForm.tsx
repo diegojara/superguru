@@ -204,8 +204,13 @@ function ForgotPassword() {
               RECUPERAR CONTRASEÑA
             </h3>
             {sent ? (
-              <div style={{ padding: '14px', background: 'var(--color-green-deep)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 'var(--radius-md)', color: 'var(--color-green)', fontSize: '0.9rem' }}>
-                ✓ Te enviamos un email con el link para recuperar tu contraseña.
+<div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ padding: '14px', background: 'var(--color-green-deep)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 'var(--radius-md)', color: 'var(--color-green)', fontSize: '0.9rem' }}>
+                  ✓ Te enviamos un email con el link para recuperar tu contraseña.
+                </div>
+                <button type="button" className="btn-ghost" onClick={() => setOpen(false)}>
+                  Volver al inicio de sesión
+                </button>
               </div>
             ) : (
               <form onSubmit={handleReset} noValidate>

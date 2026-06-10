@@ -233,9 +233,3 @@ function ForgotPassword() {
     </>
   )
 }          
-Regístrate aquí
-        </Link>
-      </p>
-    </div>
-  )
-}

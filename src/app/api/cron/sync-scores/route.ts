@@ -8,20 +8,7 @@ const CRON_SECRET  = process.env.CRON_SECRET!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-function mapEspnStatus(status: string): string {
-  switch (status) {
-    case 'STATUS_SCHEDULED':   return 'scheduled'
-    case 'STATUS_IN_PROGRESS': return 'live'
-    case 'STATUS_HALFTIME':    return 'live'
-    case 'STATUS_END_PERIOD':  return 'live'
-    case 'STATUS_FINAL':       return 'finished'
-    case 'STATUS_FULL_TIME':   return 'finished'
-    case 'STATUS_EXTRA_TIME':  return 'extra_time'
-    case 'STATUS_PENALTY':     return 'penalties'
-    default:                   return 'scheduled'
-  }
-}
-
+// Mapeo de nombres en inglés (ESPN) a español (DB)
 const TEAM_ALIASES: Record<string, string> = {
   'south africa': 'sudafrica', 'south korea': 'corea del sur',
   'czechia': 'chequia', 'czech republic': 'chequia',
@@ -46,6 +33,7 @@ const TEAM_ALIASES: Record<string, string> = {
   'iraq': 'iraq', 'iran': 'iran', 'qatar': 'qatar',
   'australia': 'australia', 'paraguay': 'paraguay',
   'uruguay': 'uruguay', 'austria': 'austria',
+  'mexico': 'mexico', 'japan': 'japon',
 }
 
 function normalize(name: string): string {
@@ -54,66 +42,25 @@ function normalize(name: string): string {
     .replace(/[^a-z0-9\s]/g, '').trim()
   return TEAM_ALIASES[clean] ?? clean
 }
-const ESPN_NAME_MAP: Record<string, string> = {
-  'mexico': 'mexico',
-  'south africa': 'sudafrica',
-  'south korea': 'corea del sur',
-  'czechia': 'chequia',
-  'canada': 'canada',
-  'bosnia and herzegovina': 'bosnia y herz',
-  'usa': 'ee uu',
-  'united states': 'ee uu',
-  'netherlands': 'paises bajos',
-  'japan': 'japon',
-  'sweden': 'suecia',
-  'tunisia': 'tunez',
-  'belgium': 'belgica',
-  'egypt': 'egipto',
-  'iran': 'iran',
-  'new zealand': 'nueva zelanda',
-  'spain': 'espana',
-  'cape verde': 'cabo verde',
-  'saudi arabia': 'arabia saudita',
-  'uruguay': 'uruguay',
-  'france': 'francia',
-  'senegal': 'senegal',
-  'iraq': 'iraq',
-  'norway': 'noruega',
-  'argentina': 'argentina',
-  'algeria': 'argelia',
-  'austria': 'austria',
-  'jordan': 'jordania',
-  'portugal': 'portugal',
-  'dr congo': 'congo dr',
-  'uzbekistan': 'uzbekistan',
-  'colombia': 'colombia',
-  'england': 'inglaterra',
-  'croatia': 'croacia',
-  'ghana': 'ghana',
-  'panama': 'panama',
-  'haiti': 'haiti',
-  'scotland': 'escocia',
-  'paraguay': 'paraguay',
-  'australia': 'australia',
-  'turkey': 'turquia',
-  'germany': 'alemania',
-  'ivory coast': 'costa marfil',
-  'ecuador': 'ecuador',
-  'curacao': 'curazao',
-  'brazil': 'brasil',
-  'morocco': 'marruecos',
-  'qatar': 'qatar',
-  'switzerland': 'suiza',
-}
 
-function espnToDb(espnName: string): string {
-  const norm = normalize(espnName)
-  return ESPN_NAME_MAP[norm] ?? norm
+function mapEspnStatus(status: string): string {
+  switch (status) {
+    case 'STATUS_SCHEDULED':   return 'scheduled'
+    case 'STATUS_IN_PROGRESS': return 'live'
+    case 'STATUS_HALFTIME':    return 'live'
+    case 'STATUS_END_PERIOD':  return 'live'
+    case 'STATUS_FINAL':       return 'finished'
+    case 'STATUS_FULL_TIME':   return 'finished'
+    case 'STATUS_EXTRA_TIME':  return 'extra_time'
+    case 'STATUS_PENALTY':     return 'penalties'
+    default:                   return 'scheduled'
+  }
 }
 
 async function callRpc(fnName: string, params: Record<string, any>) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
   const { error } = await (supabase.rpc as any)(fnName, params)
+  if (error) console.error('[sync-scores] RPC error:', error)
   return !error
 }
 
@@ -133,7 +80,7 @@ export async function GET(request: Request) {
       .select('id,home_team,away_team,kickoff_at,status,home_score,away_score')
       .neq('status', 'finished')
 
-console.log('[sync-scores] allMatches count:', allMatches?.length, 'live:', allMatches?.filter((m:any) => m.status === 'live').length)
+    console.log('[sync-scores] allMatches count:', allMatches?.length)
 
     const activeMatches = (allMatches ?? []).filter((m: any) => {
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true
@@ -166,33 +113,32 @@ console.log('[sync-scores] allMatches count:', allMatches?.length, 'live:', allM
     let updated = 0
 
     for (const match of activeMatches) {
+      const normHome = normalize(match.home_team)
+      const normAway = normalize(match.away_team)
+
       const event = espnEvents.find((e: any) => {
-        const comp = e.competitions[0]
-        const home = comp.competitors.find((t: any) => t.homeAway === 'home')
-        const away = comp.competitors.find((t: any) => t.homeAway === 'away')
-       return espnToDb(home?.team?.displayName ?? '') === normalize(match.home_team) &&
-               espnToDb(away?.team?.displayName ?? '') === normalize(match.away_team)
+        const comp     = e.competitions[0]
+        const homeTeam = comp.competitors.find((t: any) => t.homeAway === 'home')
+        const awayTeam = comp.competitors.find((t: any) => t.homeAway === 'away')
+        const espnHome = normalize(homeTeam?.team?.displayName ?? '')
+        const espnAway = normalize(awayTeam?.team?.displayName ?? '')
+        console.log(`[sync-scores] Comparando DB: "${normHome}" vs ESPN: "${espnHome}"`)
+        return espnHome === normHome && espnAway === normAway
       })
 
-      console.log('[sync-scores] Buscando:', normalize(match.home_team), 'vs', normalize(match.away_team))
-      console.log('[sync-scores] ESPN mapeado:', espnToDb('South Africa'), espnToDb('Mexico'))
-      console.log('[sync-scores] ESPN tiene:', espnEvents.map((e: any) => {
-        const comp = e.competitions[0]
-        const home = comp.competitors.find((t: any) => t.homeAway === 'home')
-        const away = comp.competitors.find((t: any) => t.homeAway === 'away')
-        return normalize(home?.team?.displayName ?? '') + ' vs ' + normalize(away?.team?.displayName ?? '')
-      }))
-      
-      if (!event) continue
+      if (!event) {
+        console.log(`[sync-scores] No encontrado en ESPN: ${match.home_team} vs ${match.away_team}`)
+        continue
+      }
 
       const comp      = event.competitions[0]
-      const home      = comp.competitors.find((t: any) => t.homeAway === 'home')
-      const away      = comp.competitors.find((t: any) => t.homeAway === 'away')
+      const homeTeam  = comp.competitors.find((t: any) => t.homeAway === 'home')
+      const awayTeam  = comp.competitors.find((t: any) => t.homeAway === 'away')
       const newStatus = mapEspnStatus(comp.status.type.name)
-      const homeScore = parseInt(home?.score ?? '0') || 0
-      const awayScore = parseInt(away?.score ?? '0') || 0
+      const homeScore = parseInt(homeTeam?.score ?? '0') || 0
+      const awayScore = parseInt(awayTeam?.score ?? '0') || 0
 
-     if (homeScore === (match.home_score ?? 0) && awayScore === (match.away_score ?? 0) && newStatus === match.status) continue
+      if (homeScore === (match.home_score ?? 0) && awayScore === (match.away_score ?? 0) && newStatus === match.status) continue
 
       const ok = await callRpc('update_match_score', {
         p_match_id:           match.id,
@@ -205,7 +151,7 @@ console.log('[sync-scores] allMatches count:', allMatches?.length, 'live:', allM
 
       if (ok) {
         updated++
-        console.log(`[sync-scores] Updated: ${match.home_team} vs ${match.away_team} ${homeScore}-${awayScore} (${newStatus})`)
+        console.log(`[sync-scores] Actualizado: ${match.home_team} ${homeScore}-${awayScore} (${newStatus})`)
       }
     }
 

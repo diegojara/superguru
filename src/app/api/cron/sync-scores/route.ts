@@ -91,6 +91,14 @@ export async function GET(request: Request) {
                normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
       })
 
+      console.log('[sync-scores] Buscando:', normalize(match.home_team), 'vs', normalize(match.away_team))
+      console.log('[sync-scores] ESPN tiene:', espnEvents.map((e: any) => {
+        const comp = e.competitions[0]
+        const home = comp.competitors.find((t: any) => t.homeAway === 'home')
+        const away = comp.competitors.find((t: any) => t.homeAway === 'away')
+        return normalize(home?.team?.displayName ?? '') + ' vs ' + normalize(away?.team?.displayName ?? '')
+      }))
+      
       if (!event) continue
 
       const comp      = event.competitions[0]

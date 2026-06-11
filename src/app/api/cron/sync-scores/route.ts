@@ -22,12 +22,38 @@ function mapEspnStatus(status: string): string {
   }
 }
 
-function normalize(name: string): string {
-  return name.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, '').trim()
+const TEAM_ALIASES: Record<string, string> = {
+  'south africa': 'sudafrica', 'south korea': 'corea del sur',
+  'czechia': 'chequia', 'czech republic': 'chequia',
+  'usa': 'ee uu', 'united states': 'ee uu',
+  'netherlands': 'paises bajos', 'holland': 'paises bajos',
+  'sweden': 'suecia', 'tunisia': 'tunez', 'belgium': 'belgica',
+  'egypt': 'egipto', 'new zealand': 'nueva zelanda',
+  'spain': 'espana', 'cape verde': 'cabo verde',
+  'saudi arabia': 'arabia saudita', 'france': 'francia',
+  'norway': 'noruega', 'algeria': 'argelia', 'jordan': 'jordania',
+  'dr congo': 'congo dr', 'uzbekistan': 'uzbekistan',
+  'england': 'inglaterra', 'croatia': 'croacia',
+  'panama': 'panama', 'haiti': 'haiti', 'scotland': 'escocia',
+  'turkey': 'turquia', 'germany': 'alemania',
+  'ivory coast': 'costa marfil', 'curacao': 'curazao',
+  'brazil': 'brasil', 'morocco': 'marruecos',
+  'switzerland': 'suiza', 'canada': 'canada',
+  'bosnia and herzegovina': 'bosnia y herz',
+  'ecuador': 'ecuador', 'colombia': 'colombia',
+  'ghana': 'ghana', 'portugal': 'portugal',
+  'argentina': 'argentina', 'senegal': 'senegal',
+  'iraq': 'iraq', 'iran': 'iran', 'qatar': 'qatar',
+  'australia': 'australia', 'paraguay': 'paraguay',
+  'uruguay': 'uruguay', 'austria': 'austria',
 }
 
+function normalize(name: string): string {
+  const clean = name.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '').trim()
+  return TEAM_ALIASES[clean] ?? clean
+}
 const ESPN_NAME_MAP: Record<string, string> = {
   'mexico': 'mexico',
   'south africa': 'sudafrica',

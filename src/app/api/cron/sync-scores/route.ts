@@ -100,7 +100,7 @@ export async function GET(request: Request) {
       const homeScore = parseInt(home?.score ?? '0') || 0
       const awayScore = parseInt(away?.score ?? '0') || 0
 
-      if (homeScore === match.home_score && awayScore === match.away_score && newStatus === match.status) continue
+     if (homeScore === (match.home_score ?? 0) && awayScore === (match.away_score ?? 0) && newStatus === match.status) continue
 
       const ok = await callRpc('update_match_score', {
         p_match_id:           match.id,

@@ -28,6 +28,63 @@ function normalize(name: string): string {
     .replace(/[^a-z0-9\s]/g, '').trim()
 }
 
+const ESPN_NAME_MAP: Record<string, string> = {
+  'mexico': 'mexico',
+  'south africa': 'sudafrica',
+  'south korea': 'corea del sur',
+  'czechia': 'chequia',
+  'canada': 'canada',
+  'bosnia and herzegovina': 'bosnia y herz',
+  'usa': 'ee uu',
+  'united states': 'ee uu',
+  'netherlands': 'paises bajos',
+  'japan': 'japon',
+  'sweden': 'suecia',
+  'tunisia': 'tunez',
+  'belgium': 'belgica',
+  'egypt': 'egipto',
+  'iran': 'iran',
+  'new zealand': 'nueva zelanda',
+  'spain': 'espana',
+  'cape verde': 'cabo verde',
+  'saudi arabia': 'arabia saudita',
+  'uruguay': 'uruguay',
+  'france': 'francia',
+  'senegal': 'senegal',
+  'iraq': 'iraq',
+  'norway': 'noruega',
+  'argentina': 'argentina',
+  'algeria': 'argelia',
+  'austria': 'austria',
+  'jordan': 'jordania',
+  'portugal': 'portugal',
+  'dr congo': 'congo dr',
+  'uzbekistan': 'uzbekistan',
+  'colombia': 'colombia',
+  'england': 'inglaterra',
+  'croatia': 'croacia',
+  'ghana': 'ghana',
+  'panama': 'panama',
+  'haiti': 'haiti',
+  'scotland': 'escocia',
+  'paraguay': 'paraguay',
+  'australia': 'australia',
+  'turkey': 'turquia',
+  'germany': 'alemania',
+  'ivory coast': 'costa marfil',
+  'ecuador': 'ecuador',
+  'curacao': 'curazao',
+  'brazil': 'brasil',
+  'morocco': 'marruecos',
+  'qatar': 'qatar',
+  'switzerland': 'suiza',
+}
+
+function espnToDb(espnName: string): string {
+  const norm = normalize(espnName)
+  return ESPN_NAME_MAP[norm] ?? norm
+}
+
 async function callRpc(fnName: string, params: Record<string, any>) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
   const { error } = await (supabase.rpc as any)(fnName, params)

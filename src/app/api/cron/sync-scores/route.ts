@@ -149,6 +149,7 @@ console.log('[sync-scores] allMatches count:', allMatches?.length, 'live:', allM
       })
 
       console.log('[sync-scores] Buscando:', normalize(match.home_team), 'vs', normalize(match.away_team))
+      console.log('[sync-scores] ESPN mapeado:', espnToDb('South Africa'), espnToDb('Mexico'))
       console.log('[sync-scores] ESPN tiene:', espnEvents.map((e: any) => {
         const comp = e.competitions[0]
         const home = comp.competitors.find((t: any) => t.homeAway === 'home')

@@ -144,8 +144,8 @@ console.log('[sync-scores] allMatches count:', allMatches?.length, 'live:', allM
         const comp = e.competitions[0]
         const home = comp.competitors.find((t: any) => t.homeAway === 'home')
         const away = comp.competitors.find((t: any) => t.homeAway === 'away')
-        return normalize(home?.team?.displayName ?? '') === normalize(match.home_team) &&
-               normalize(away?.team?.displayName ?? '') === normalize(match.away_team)
+       return espnToDb(home?.team?.displayName ?? '') === normalize(match.home_team) &&
+               espnToDb(away?.team?.displayName ?? '') === normalize(match.away_team)
       })
 
       console.log('[sync-scores] Buscando:', normalize(match.home_team), 'vs', normalize(match.away_team))

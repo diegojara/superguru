@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       .select('id,home_team,away_team,kickoff_at,status,home_score,away_score')
       .neq('status', 'finished')
 
-    console.log('[sync-scores] allMatches count:', allMatches?.length)
+console.log('[sync-scores] allMatches count:', allMatches?.length, 'live:', allMatches?.filter((m:any) => m.status === 'live').length)
 
     const activeMatches = (allMatches ?? []).filter((m: any) => {
       if (['live', 'extra_time', 'penalties'].includes(m.status)) return true

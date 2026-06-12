@@ -2,7 +2,8 @@
 // src/app/(app)/pools/[poolId]/predictions/PredictionsClient.tsx
 // Vista unificada: ingreso de pronósticos + comparación con otros participantes.
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { utcToCot, isPredictionLocked, timeUntilLock } from '@/lib/utils/datetime'
 import { TIER_LABELS } from '@/lib/utils/scoring'
@@ -112,6 +113,25 @@ export default function PredictionsClient({
   const [selected, setSelected] = useState<string[]>([])
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
+const router = useRouter()
+
+  // Realtime — actualiza automáticamente cuando cambia el marcador
+  useEffect(() => {
+    const supabaseRT = createClient()
+    const channel = supabaseRT
+      .channel('matches-changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'matches',
+      }, () => {
+        router.refresh()
+      })
+      .subscribe()
+
+    return () => { supabaseRT.removeChannel(channel) }
+  }, [router])
+  
   // Mapas de acceso rápido
   const scoreMap = Object.fromEntries(myScores.map(s => [s.match_id, s]))
   const otherPredMap: Record<string, Record<string, OtherPred>> = {}

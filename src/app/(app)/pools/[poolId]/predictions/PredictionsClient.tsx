@@ -3,10 +3,8 @@
 // Vista unificada: ingreso de pronósticos + comparación con otros participantes.
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { utcToCot, isPredictionLocked, timeUntilLock } from '@/lib/utils/datetime'
-import { TIER_LABELS } from '@/lib/utils/scoring'
 
 // ---------------------------------------------------------------------------
 // Helpers de banderas y códigos
@@ -48,18 +46,7 @@ function teamCode(name: string): string {
     'Francia': 'FRA','Senegal': 'SEN','Iraq': 'IRQ','Noruega': 'NOR',
     'Argentina': 'ARG','Argelia': 'ALG','Austria': 'AUT','Jordania': 'JOR',
     'Portugal': 'POR','Congo DR': 'COD','Uzbekistán': 'UZB','Colombia': 'COL',
-    'Inglaterra': 'ENG','Croacia': 'CRO','Ghana': 'GHA','Panamá': 'PAN', 'Atlético Nacional': 'Nacional',
-    'Inter Bogotá': 'Inter',
-    'Internacional de Bogotá': 'Inter',
-    'Independiente Santa Fe': 'Santa Fe',
-    'América de Cali': 'América',
-    'Deportivo Pasto': 'Pasto',
-    'Deportes Tolima': 'Tolima',
-    'Junior de Barranquilla': 'Junior',
-'Atlético Junior': 'Junior',
-    'Once Caldas': 'Caldas',
-    'Arsenal': 'Arsenal',
-    'PSG': 'PSG',
+    'Inglaterra': 'ENG','Croacia': 'CRO','Ghana': 'GHA','Panamá': 'PAN',
   }
   if (o[name]) return o[name]
   const p1 = name.match(/^1ro Grupo ([A-Z])$/); if (p1) return `1° ${p1[1]}`
@@ -78,6 +65,7 @@ interface Match  { id: string; home_team: string; away_team: string; kickoff_at:
 interface Pred   { match_id: string; predicted_home: number; predicted_away: number; locked_at: string | null }
 interface Score  { match_id: string; points_earned: number; breakdown: any }
 interface OtherPred { pool_member_id: string; match_id: string; predicted_home: number; predicted_away: number }
+interface LiveMatch { home_score: number | null; away_score: number | null; status: string }
 
 interface Props {
   poolId: string
@@ -109,41 +97,39 @@ export default function PredictionsClient({
     return map
   })
 
-  // Participantes seleccionados para comparar (máx 2)
+  // Estado en tiempo real de los partidos
+  const [liveMatches, setLiveMatches] = useState<Record<string, LiveMatch>>(() =>
+    Object.fromEntries(matches.map(m => [m.id, { home_score: m.home_score, away_score: m.away_score, status: m.status }]))
+  )
+
+  // Suscripción Realtime
+  useEffect(() => {
+    const rt = createClient()
+    const channel = rt
+      .channel('matches-realtime')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'matches' }, (payload: any) => {
+        const u = payload.new
+        setLiveMatches(prev => ({
+          ...prev,
+          [u.id]: { home_score: u.home_score, away_score: u.away_score, status: u.status }
+        }))
+        // Si el partido pasó a live/finished, también bloquear pronóstico localmente
+        if (['live','extra_time','penalties','finished'].includes(u.status)) {
+          setPreds(prev => {
+            const p = prev[u.id]
+            if (p && !p.locked) return { ...prev, [u.id]: { ...p, locked: true } }
+            return prev
+          })
+        }
+      })
+      .subscribe()
+    return () => { rt.removeChannel(channel) }
+  }, [])
+
+  // Participantes seleccionados para comparar (máx 4)
   const [selected, setSelected] = useState<string[]>([])
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
-const router = useRouter()
-
-// Estado de los partidos (para actualización en tiempo real)
-  const [liveMatches, setLiveMatches] = useState<Record<string, { home_score: number | null; away_score: number | null; status: string }>>(
-    () => Object.fromEntries(matches.map(m => [m.id, { home_score: m.home_score, away_score: m.away_score, status: m.status }]))
-  )
-
-  // Realtime — actualiza marcadores automáticamente
-  useEffect(() => {
-    const supabaseRT = createClient()
-    const channel = supabaseRT
-      .channel('matches-realtime')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'matches',
-      }, (payload: any) => {
-        const updated = payload.new
-        setLiveMatches(prev => ({
-          ...prev,
-          [updated.id]: {
-            home_score: updated.home_score,
-            away_score: updated.away_score,
-            status:     updated.status,
-          }
-        }))
-      })
-      .subscribe()
-
-    return () => { supabaseRT.removeChannel(channel) }
-  }, [])  
   // Mapas de acceso rápido
   const scoreMap = Object.fromEntries(myScores.map(s => [s.match_id, s]))
   const otherPredMap: Record<string, Record<string, OtherPred>> = {}
@@ -186,7 +172,6 @@ const router = useRouter()
     }, 800)
   }, [save])
 
-  // Selector de participantes
   function toggleMember(id: string) {
     setSelected(prev =>
       prev.includes(id) ? prev.filter(x => x !== id)
@@ -219,7 +204,7 @@ const router = useRouter()
         <StatPill value={pending} label="pendientes" color={pending > 0 ? 'var(--color-gold)' : 'var(--color-text-muted)'} />
       </div>
 
-      {/* Selector de participantes para comparar */}
+      {/* Selector de participantes */}
       {allMembers.length > 0 && (
         <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '14px 18px' }}>
           <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '10px', letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -228,23 +213,15 @@ const router = useRouter()
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {allMembers.map((m: Member) => {
               const isSelected = selected.includes(m.id)
-              const isDisabled = !isSelected && selected.length >= 2
+              const isDisabled = !isSelected && selected.length >= 4
               return (
-                <button
-                  key={m.id}
-                  onClick={() => toggleMember(m.id)}
-                  disabled={isDisabled}
-                  style={{
-                    padding: '5px 14px',
-                    borderRadius: '99px',
-                    border: `1px solid ${isSelected ? 'var(--color-green)' : 'var(--color-border)'}`,
-                    background: isSelected ? 'var(--color-green-deep)' : 'transparent',
-                    color: isSelected ? 'var(--color-green)' : isDisabled ? 'var(--color-text-subtle)' : 'var(--color-text-muted)',
-                    fontSize: '0.875rem',
-                    cursor: isDisabled ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
+                <button key={m.id} onClick={() => toggleMember(m.id)} disabled={isDisabled} style={{
+                  padding: '5px 14px', borderRadius: '99px',
+                  border: `1px solid ${isSelected ? 'var(--color-green)' : 'var(--color-border)'}`,
+                  background: isSelected ? 'var(--color-green-deep)' : 'transparent',
+                  color: isSelected ? 'var(--color-green)' : isDisabled ? 'var(--color-text-subtle)' : 'var(--color-text-muted)',
+                  fontSize: '0.875rem', cursor: isDisabled ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+                }}>
                   {m.display_name}
                 </button>
               )
@@ -262,27 +239,26 @@ const router = useRouter()
 
           <div style={{ background: 'var(--color-bg-card)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
             {dayMatches.map((match, i) => {
-              const locked    = isPredictionLocked(match.kickoff_at) || !!preds[match.id]?.locked
-              const isVisible = ['live','extra_time','penalties','finished'].includes(match.status)
+              // Usar datos en tiempo real
+              const live      = liveMatches[match.id] ?? { home_score: match.home_score, away_score: match.away_score, status: match.status }
+              const locked    = isPredictionLocked(match.kickoff_at) || !!preds[match.id]?.locked || ['live','extra_time','penalties','finished'].includes(live.status)
+              const isVisible = ['live','extra_time','penalties','finished'].includes(live.status)
               const timeLeft  = timeUntilLock(match.kickoff_at)
               const pred      = preds[match.id]
               const score     = scoreMap[match.id]
-              const hasScore  = match.home_score !== null && match.away_score !== null
+              const hasScore  = live.home_score !== null && live.away_score !== null
               const isLast    = i === dayMatches.length - 1
               const cotTime   = utcToCot(match.kickoff_at)
               const timeStr   = cotTime.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC' })
-              const status    = pred?.status ?? 'idle'
-              const isLive    = ['live','extra_time','penalties'].includes(match.status)
+              const saveStatus = pred?.status ?? 'idle'
+              const isLive    = ['live','extra_time','penalties'].includes(live.status)
 
               const inputStyle = (val: string) => ({
                 width: '44px', height: '36px', textAlign: 'center' as const,
                 background: 'var(--color-bg-elevated)',
                 border: `1px solid ${val !== '' ? 'rgba(34,197,94,0.5)' : 'var(--color-border)'}`,
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--color-text)',
-                fontFamily: 'var(--font-display)',
-                fontSize: '1.2rem',
-                outline: 'none',
+                borderRadius: 'var(--radius-sm)', color: 'var(--color-text)',
+                fontFamily: 'var(--font-display)', fontSize: '1.2rem', outline: 'none',
               })
 
               return (
@@ -291,45 +267,35 @@ const router = useRouter()
                   background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)',
                   opacity: locked && !isVisible ? 0.65 : 1,
                 }}>
-
                   {!locked && timeLeft && (
                     <div style={{ padding: '3px 14px 0', fontSize: '0.7rem', color: 'var(--color-gold)' }}>
                       ⏱ Cierra en {timeLeft}
                     </div>
                   )}
 
-                  {/* Grid: bandera | código | real | mi pred | [otros...] | pts | estado */}
                   {/* Fila local */}
                   <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${score ? '36px' : ''} ${selected.map(() => '48px').join(' ')} 1fr`, alignItems: 'center', padding: '10px 14px 3px', gap: '0 8px' }}>
                     <FlagImg name={match.home_team} />
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', letterSpacing: '0.04em' }}>{teamCode(match.home_team)}</span>
-
-                    {/* Marcador real */}
                     <div style={{ textAlign: 'center' }}>
                       {hasScore
-                        ? <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: isLive ? 'var(--color-live)' : 'var(--color-text)' }}>{match.home_score}</span>
+                        ? <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: isLive ? 'var(--color-live)' : 'var(--color-text)' }}>{live.home_score}</span>
                         : <span style={{ fontSize: '0.7rem', color: 'var(--color-text-subtle)' }}>{timeStr}</span>
                       }
                     </div>
-
-                    {/* Mi pronóstico */}
                     <div style={{ textAlign: 'center' }}>
                       {locked
                         ? <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>{pred?.home ?? '–'}</span>
                         : <input type="number" min={0} max={20} value={pred?.home ?? ''} placeholder="–" onChange={e => handleChange(match.id, 'home', e.target.value)} style={inputStyle(pred?.home ?? '')} />
                       }
                     </div>
-
-                    {/* Puntos — antes de los otros participantes */}
                     {score && (
-                      <div style={{ textAlign: 'center', gridRow: 'span 1' }}>
+                      <div style={{ textAlign: 'center' }}>
                         <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: score.points_earned > 0 ? 'var(--color-green)' : 'var(--color-text-subtle)' }}>
                           {score.points_earned}
                         </span>
                       </div>
                     )}
-
-                    {/* Pronósticos de otros (solo si visible) */}
                     {selected.map(memberId => {
                       const op = otherPredMap[match.id]?.[memberId]
                       return (
@@ -341,11 +307,9 @@ const router = useRouter()
                         </div>
                       )
                     })}
-
-                    {/* Horario / estado */}
                     <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', paddingLeft: '4px' }}>
                       {isLive && <span style={{ color: 'var(--color-live)', fontWeight: 600 }}>● VIVO</span>}
-                      {locked && !isLive && match.status !== 'finished' && '🔒'}
+                      {locked && !isLive && live.status !== 'finished' && '🔒'}
                     </div>
                   </div>
 
@@ -353,27 +317,19 @@ const router = useRouter()
                   <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${score ? '36px' : ''} ${selected.map(() => '48px').join(' ')} 1fr`, alignItems: 'center', padding: '3px 14px 10px', gap: '0 8px' }}>
                     <FlagImg name={match.away_team} />
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', letterSpacing: '0.04em' }}>{teamCode(match.away_team)}</span>
-
-                    {/* Marcador real */}
                     <div style={{ textAlign: 'center' }}>
                       {hasScore
-                        ? <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: isLive ? 'var(--color-live)' : 'var(--color-text)' }}>{match.away_score}</span>
+                        ? <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: isLive ? 'var(--color-live)' : 'var(--color-text)' }}>{live.away_score}</span>
                         : <span style={{ fontSize: '0.7rem', color: 'var(--color-text-subtle)' }}>–</span>
                       }
                     </div>
-
-                    {/* Mi pronóstico */}
                     <div style={{ textAlign: 'center' }}>
                       {locked
                         ? <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--color-text-muted)' }}>{pred?.away ?? '–'}</span>
                         : <input type="number" min={0} max={20} value={pred?.away ?? ''} placeholder="–" onChange={e => handleChange(match.id, 'away', e.target.value)} style={inputStyle(pred?.away ?? '')} />
                       }
                     </div>
-
-                    {/* Espacio para puntos */}
                     {score && <div />}
-
-                    {/* Pronósticos de otros */}
                     {selected.map(memberId => {
                       const op = otherPredMap[match.id]?.[memberId]
                       return (
@@ -385,17 +341,15 @@ const router = useRouter()
                         </div>
                       )
                     })}
-
-                    {/* Estado de guardado */}
                     <div style={{ fontSize: '0.7rem', paddingLeft: '4px',
-                      color: status === 'saved' ? 'var(--color-green)' : status === 'saving' ? 'var(--color-text-muted)' : status === 'error' ? 'var(--color-error)' : 'transparent'
+                      color: saveStatus === 'saved' ? 'var(--color-green)' : saveStatus === 'saving' ? 'var(--color-text-muted)' : saveStatus === 'error' ? 'var(--color-error)' : 'transparent'
                     }}>
-                      {status === 'saved' ? '✓ guardado' : status === 'saving' ? 'guardando…' : status === 'error' ? 'error' : '.'}
+                      {saveStatus === 'saved' ? '✓ guardado' : saveStatus === 'saving' ? 'guardando…' : saveStatus === 'error' ? 'error' : '.'}
                     </div>
                   </div>
 
-                  {/* Leyenda de columnas (solo primer partido del día) */}
-                  {i === 0 && (selected.length > 0 || true) && (
+                  {/* Leyenda */}
+                  {i === 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: `24px 52px 40px 48px ${score ? '36px' : ''} ${selected.map(() => '48px').join(' ')} 1fr`, padding: '0 14px 6px', gap: '0 8px' }}>
                       <div /><div />
                       <div style={{ textAlign: 'center', fontSize: '0.6rem', color: 'var(--color-text-subtle)', letterSpacing: '0.04em' }}>REAL</div>

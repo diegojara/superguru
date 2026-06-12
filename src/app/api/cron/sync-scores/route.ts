@@ -28,7 +28,7 @@ const TEAM_ALIASES: Record<string, string> = {
   'switzerland': 'suiza', 'canada': 'canada',
   'bosnia and herzegovina': 'bosnia y herz',
   'bosnia-herzegovina': 'bosnia y herz',
-  'bosnia herzegovina': 'bosnia y herz',
+  'bosnia herzegovina': 'bosnia y herz', 'bosniaherzegovina': 'bosnia y herz',
   'ecuador': 'ecuador', 'colombia': 'colombia',
   'ghana': 'ghana', 'portugal': 'portugal',
   'argentina': 'argentina', 'senegal': 'senegal',

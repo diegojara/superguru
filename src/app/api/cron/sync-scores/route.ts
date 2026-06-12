@@ -8,34 +8,74 @@ const CRON_SECRET  = process.env.CRON_SECRET!
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-// Mapeo de nombres en inglés (ESPN) a español (DB)
+// Mapa completo ESPN (inglés normalizado) → DB (español normalizado)
 const TEAM_ALIASES: Record<string, string> = {
-  'south africa': 'sudafrica', 'south korea': 'corea del sur',
-  'czechia': 'chequia', 'czech republic': 'chequia',
-  'usa': 'ee uu', 'united states': 'ee uu',
-  'netherlands': 'paises bajos', 'holland': 'paises bajos',
-  'sweden': 'suecia', 'tunisia': 'tunez', 'belgium': 'belgica',
-  'egypt': 'egipto', 'new zealand': 'nueva zelanda',
-  'spain': 'espana', 'cape verde': 'cabo verde',
-  'saudi arabia': 'arabia saudita', 'france': 'francia',
-  'norway': 'noruega', 'algeria': 'argelia', 'jordan': 'jordania',
-  'dr congo': 'congo dr', 'uzbekistan': 'uzbekistan',
-  'england': 'inglaterra', 'croatia': 'croacia',
-  'panama': 'panama', 'haiti': 'haiti', 'scotland': 'escocia',
-  'turkey': 'turquia', 'germany': 'alemania',
-  'ivory coast': 'costa marfil', 'curacao': 'curazao',
-  'brazil': 'brasil', 'morocco': 'marruecos',
-  'switzerland': 'suiza', 'canada': 'canada',
+  'algeria': 'argelia',
+  'argentina': 'argentina',
+  'australia': 'australia',
+  'austria': 'austria',
+  'belgium': 'belgica',
+  'bolivia': 'bolivia',
   'bosnia and herzegovina': 'bosnia y herz',
-  'bosnia-herzegovina': 'bosnia y herz',
-  'bosnia herzegovina': 'bosnia y herz', 'bosniaherzegovina': 'bosnia y herz',
-  'ecuador': 'ecuador', 'colombia': 'colombia',
-  'ghana': 'ghana', 'portugal': 'portugal',
-  'argentina': 'argentina', 'senegal': 'senegal',
-  'iraq': 'iraq', 'iran': 'iran', 'qatar': 'qatar',
-  'australia': 'australia', 'paraguay': 'paraguay',
-  'uruguay': 'uruguay', 'austria': 'austria',
-  'mexico': 'mexico', 'japan': 'japon',
+  'bosniaherzegovina': 'bosnia y herz',
+  'bosniaherzegovina': 'bosnia y herz',
+  'brazil': 'brasil',
+  'canada': 'canada',
+  'cape verde': 'cabo verde',
+  'chile': 'chile',
+  'colombia': 'colombia',
+  'costa rica': 'costa rica',
+  'croatia': 'croacia',
+  'curacao': 'curazao',
+  'czechia': 'chequia',
+  'czech republic': 'chequia',
+  'dr congo': 'congo dr',
+  'democratic republic of congo': 'congo dr',
+  'ecuador': 'ecuador',
+  'egypt': 'egipto',
+  'england': 'inglaterra',
+  'france': 'francia',
+  'germany': 'alemania',
+  'ghana': 'ghana',
+  'haiti': 'haiti',
+  'hungary': 'hungria',
+  'iran': 'iran',
+  'iraq': 'iraq',
+  'italy': 'italia',
+  'ivory coast': 'costa marfil',
+  "cote divoire": 'costa marfil',
+  'jamaica': 'jamaica',
+  'japan': 'japon',
+  'jordan': 'jordania',
+  'mexico': 'mexico',
+  'morocco': 'marruecos',
+  'netherlands': 'paises bajos',
+  'new zealand': 'nueva zelanda',
+  'nigeria': 'nigeria',
+  'norway': 'noruega',
+  'panama': 'panama',
+  'paraguay': 'paraguay',
+  'peru': 'peru',
+  'portugal': 'portugal',
+  'qatar': 'qatar',
+  'saudi arabia': 'arabia saudita',
+  'scotland': 'escocia',
+  'senegal': 'senegal',
+  'south africa': 'sudafrica',
+  'south korea': 'corea del sur',
+  'korea republic': 'corea del sur',
+  'spain': 'espana',
+  'sweden': 'suecia',
+  'switzerland': 'suiza',
+  'tunisia': 'tunez',
+  'turkey': 'turquia',
+  'turkiye': 'turquia',
+  'united states': 'ee uu',
+  'usa': 'ee uu',
+  'uruguay': 'uruguay',
+  'uzbekistan': 'uzbekistan',
+  'venezuela': 'venezuela',
+  'wales': 'gales',
 }
 
 function normalize(name: string): string {
@@ -47,15 +87,16 @@ function normalize(name: string): string {
 
 function mapEspnStatus(status: string): string {
   switch (status) {
-    case 'STATUS_SCHEDULED':   return 'scheduled'
-    case 'STATUS_IN_PROGRESS': return 'live'
-    case 'STATUS_HALFTIME':    return 'live'
-    case 'STATUS_END_PERIOD':  return 'live'
-    case 'STATUS_FINAL':       return 'finished'
-    case 'STATUS_FULL_TIME':   return 'finished'
-    case 'STATUS_EXTRA_TIME':  return 'extra_time'
-    case 'STATUS_PENALTY':     return 'penalties'
-    default:                   return 'scheduled'
+    case 'STATUS_SCHEDULED':      return 'scheduled'
+    case 'STATUS_IN_PROGRESS':    return 'live'
+    case 'STATUS_HALFTIME':       return 'live'
+    case 'STATUS_END_PERIOD':     return 'live'
+    case 'STATUS_SECOND_HALF':    return 'live'
+    case 'STATUS_FINAL':          return 'finished'
+    case 'STATUS_FULL_TIME':      return 'finished'
+    case 'STATUS_EXTRA_TIME':     return 'extra_time'
+    case 'STATUS_PENALTY':        return 'penalties'
+    default:                      return 'scheduled'
   }
 }
 
@@ -124,7 +165,6 @@ export async function GET(request: Request) {
         const awayTeam = comp.competitors.find((t: any) => t.homeAway === 'away')
         const espnHome = normalize(homeTeam?.team?.displayName ?? '')
         const espnAway = normalize(awayTeam?.team?.displayName ?? '')
-       console.log(`[sync-scores] DB: "${normHome}" vs "${normAway}" | ESPN: "${espnHome}" vs "${espnAway}"`)
         return espnHome === normHome && espnAway === normAway
       })
 

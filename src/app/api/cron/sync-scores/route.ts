@@ -124,7 +124,7 @@ export async function GET(request: Request) {
         const awayTeam = comp.competitors.find((t: any) => t.homeAway === 'away')
         const espnHome = normalize(homeTeam?.team?.displayName ?? '')
         const espnAway = normalize(awayTeam?.team?.displayName ?? '')
-        console.log(`[sync-scores] Comparando DB: "${normHome}" vs ESPN: "${espnHome}"`)
+       console.log(`[sync-scores] DB: "${normHome}" vs "${normAway}" | ESPN: "${espnHome}" vs "${espnAway}"`)
         return espnHome === normHome && espnAway === normAway
       })
 

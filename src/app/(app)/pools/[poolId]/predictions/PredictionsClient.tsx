@@ -115,23 +115,35 @@ export default function PredictionsClient({
 
 const router = useRouter()
 
-  // Realtime — actualiza automáticamente cuando cambia el marcador
+// Estado de los partidos (para actualización en tiempo real)
+  const [liveMatches, setLiveMatches] = useState<Record<string, { home_score: number | null; away_score: number | null; status: string }>>(
+    () => Object.fromEntries(matches.map(m => [m.id, { home_score: m.home_score, away_score: m.away_score, status: m.status }]))
+  )
+
+  // Realtime — actualiza marcadores automáticamente
   useEffect(() => {
     const supabaseRT = createClient()
     const channel = supabaseRT
-      .channel('matches-changes')
+      .channel('matches-realtime')
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
         table: 'matches',
-      }, () => {
-        router.refresh()
+      }, (payload: any) => {
+        const updated = payload.new
+        setLiveMatches(prev => ({
+          ...prev,
+          [updated.id]: {
+            home_score: updated.home_score,
+            away_score: updated.away_score,
+            status:     updated.status,
+          }
+        }))
       })
       .subscribe()
 
     return () => { supabaseRT.removeChannel(channel) }
-  }, [router])
-  
+  }, [])  
   // Mapas de acceso rápido
   const scoreMap = Object.fromEntries(myScores.map(s => [s.match_id, s]))
   const otherPredMap: Record<string, Record<string, OtherPred>> = {}

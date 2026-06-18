@@ -197,12 +197,31 @@ const authHeader = request.headers.get('authorization')
       }
     }
 
-    return NextResponse.json({
-      ok: true, updated,
-      active: activeMatches.length,
-      espn_events: espnEvents.length,
-      timestamp: now.toISOString(),
-    })
+return NextResponse.json({
+  ok: true, updated,
+  active: activeMatches.length,
+  espn_events: espnEvents.length,
+  timestamp: now.toISOString(),
+  debug_matches: activeMatches.map((m: any) => ({
+    home: m.home_team,
+    away: m.away_team,
+    home_norm: normalize(m.home_team),
+    away_norm: normalize(m.away_team),
+    status: m.status,
+  })),
+  debug_espn: espnEvents.map((e: any) => {
+    const comp = e.competitions[0]
+    const home = comp.competitors.find((t: any) => t.homeAway === 'home')
+    const away = comp.competitors.find((t: any) => t.homeAway === 'away')
+    return {
+      home_raw: home?.team?.displayName,
+      away_raw: away?.team?.displayName,
+      home_norm: normalize(home?.team?.displayName ?? ''),
+      away_norm: normalize(away?.team?.displayName ?? ''),
+      status: comp.status.type.name,
+    }
+  }),
+})
 
   } catch (error: any) {
     console.error('[sync-scores]', error)
